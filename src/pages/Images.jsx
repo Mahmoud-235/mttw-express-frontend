@@ -20,7 +20,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useFetch } from "../hooks/useFetch";
-import { imagesAPI, sectorsAPI } from "../services/api";
+// 🔥 أضفنا devicesAPI هنا عشان ننده على جلب الأجهزة
+import { imagesAPI, sectorsAPI, devicesAPI } from "../services/api";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { timeAgo } from "../utils/helpers";
 import toast from "react-hot-toast";
@@ -587,7 +588,8 @@ export default function Images() {
 
   const { data: sData } = useFetch(sectorsAPI.getAll);
   const sectors = sData?.data || [];
-
+  const { data: dData } = useFetch(devicesAPI.getAll);
+  const devices = dData?.data || [];
   const [sectorId, setSectorId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [delId, setDelId] = useState(null);
@@ -637,23 +639,23 @@ export default function Images() {
       const fd = new FormData();
       fd.append("image", file);
 
-      // 🚀 السحر هنا: بنبحث في قائمة الأجهزة عن الجهاز المربوط بالقطاع المختار حالياً
-      // تأكد أن اسم مصفوفة الأجهزة عندك مطابق (لو اسم المتغير عندك مش devices غيره هنا)
+      // 🚀 السحر اشتغل هنا: بنبحث في قائمة الأجهزة (devices) المجلوبة فوق عن المطابق للقطاع
       const matchedDevice = devices?.find(
         (dev) => dev.sectorId?._id === sectorId || dev.sectorId === sectorId,
       );
 
-      // لو لقى الجهاز هياخد السيريال الحقيقي بتاعه (مثال: "ESP32-UNIT-03" أو "فف")
-      // لو مالقاش جهاز للقطاع ده، هيحط قيمة احتياطية عشان الـ Request ما يضربش
-      const currentSerial = matchedDevice?.deviceSerial;
+      // لو لقى الجهاز بياخد السيريال الحقيقي بتاعه الفريد (زي "فف" أو "ESP32-UNIT-03")
+      // ولو القطاع ملوش جهاز، هيديله سيريال افتراضي احتياطي عشان الباك إند ما يضربش 400 أو 500
+      const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
 
       fd.append("deviceSerial", currentSerial);
 
       // بنبعت الـ sectorId برضه عشان الباك إند محتاجه
       fd.append("sectorId", sectorId);
 
-      // (اختياري للـ Debugging) عشان تشوف في الـ Console السيريال اللي اتقفش كام
-      console.log("Matched Serial for sector:", sectorId, "is:", currentSerial);
+      console.log(
+        `🚀 Sending dynamically -> Serial: [${currentSerial}] for Sector: [${sectorId}]`,
+      );
 
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
