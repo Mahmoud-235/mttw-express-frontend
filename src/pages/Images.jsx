@@ -787,24 +787,8 @@ export default function Images() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-
-      // 🕵️‍♂️ تأمين السيريال: لو عندك متغير تاني شايل داتا القطاع (مثلاً اسمه sector) بدله هنا
-      // هنا بنحاول نقرأ من الـ sectors المتاحة أو القطاع الحالي
-      const currentSerial =
-        sector?.devices?.[0]?.deviceSerial ||
-        currentSector?.devices?.[0]?.deviceSerial ||
-        "ESP32-UNIT-01"; // قيمة احتياطية شغالة عشان ما يرفضش الطلب لو لسه الـ DB فاضية
-
-      fd.append("deviceSerial", currentSerial);
-
-      if (sectorId) {
-        fd.append("sectorId", sectorId);
-      }
-
-      // اطبخ الـ FormData في الـ Console قبل ما تبعت عشان تشوف الداتا رايحة إزاي
-      console.log("Sending Serial:", currentSerial);
-      console.log("Sending SectorId:", sectorId);
-
+      fd.append("deviceSerial", "ESP32-UNIT-01");
+      if (sectorId) fd.append("sectorId", sectorId);
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
         toast.success("Image uploaded and analyzed successfully! 🎉");
@@ -812,12 +796,7 @@ export default function Images() {
         setCurrentPage(1);
       }
     } catch (error) {
-      // 🚀 هنا السحر: هيطبع لك في الـ Console الإيرور الحقيقي اللي الباكيند بيبعته
-      console.error("Full Upload Error Details:", error.response?.data);
-
-      const serverMessage =
-        error.response?.data?.message || error.response?.data?.error;
-      toast.error(serverMessage || "Upload failed");
+      toast.error(error.response?.data?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
