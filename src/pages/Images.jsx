@@ -787,8 +787,16 @@ export default function Images() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-      fd.append("deviceSerial", "ESP32-UNIT-01");
+
+      // 🚀 التعديل الديناميكي هنا:
+      // بنشوف لو القطاع الحالي جواه أجهزة، بناخد السيريال بتاع أول جهاز مربوط بيه [0]
+      // لو المصفوفة لسه فاضية لأي سبب، بنحط سيريال احتياطي عشان الكود ما يضربش
+      const currentSerial =
+        currentSector?.devices?.[0]?.deviceSerial || "ESP32-UNIT-01";
+      fd.append("deviceSerial", currentSerial);
+
       if (sectorId) fd.append("sectorId", sectorId);
+
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
         toast.success("Image uploaded and analyzed successfully! 🎉");
