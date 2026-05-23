@@ -7,18 +7,35 @@ import toast from "react-hot-toast";
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(false); // الـ loading المحلي الخاص بالزرار فقط
+  const [loading, setLoading] = useState(false); // الـ loading المحلي الخاص بالزرار التقليدي
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { login, loginWithGoogle, user } = useAuth();
+  const { login, user } = useAuth(); // سحبنا فقط اللي محتاجينه
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 1. فحص لو فيه توكن جاي في الـ URL بعد رجوع السيرفر من جوجل
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get("token");
+
+    if (tokenFromUrl) {
+      // حفظ التوكن في الـ LocalStorage لتثبيت الجلسة
+      localStorage.setItem("ecosense_token", tokenFromUrl);
+
+      toast.success("Signed in with Google successfully! 🚀");
+
+      // التوجيه للـ Dashboard وتنظيف الـ URL من التوكن لحماية بيانات المستخدم
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    // 2. التوجيه الطبيعي لو المستخدم مسجل دخول أصلاً ومخزن في الـ Context
     if (user) {
-      navigate("/", { replace: true }); // 🌟 مسح صفحة اللوجين من التاريخ
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
+  // تسجيل الدخول التقليدي بالـ Email والـ Password
   const handleSubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -32,7 +49,6 @@ export default function Login() {
       toast.success("Welcome back! 👋");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      // فك تشفير رسالة السيرفر بدقة حى لو Axios ضربت
       const errorMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
@@ -40,31 +56,22 @@ export default function Login() {
           ? "سيرفر الباكيند لا يستجيب، تأكد من الاتصال أو إعدادات CORS 🌐"
           : "حدث خطأ غير متوقع، حاول مجدداً ⚠️");
 
-      // إطلاق التوست في الـ top-right بأمان
       toast.error(errorMessage);
     } finally {
-      setLoading(false); // قفل التحميل المحلي للزرار عشان يرجع يشتغل عادي
+      setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async (e) => {
+  // تسجيل الدخول عن طريق جوجل (توجيه كامل للمتصفح لمنع الـ CORS block)
+  const handleGoogleLogin = (e) => {
     e.preventDefault();
     setGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      const BACKEND_VERCEL_URL = "https://mttw-backend.vercel.app";
 
-      window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google`;
-      toast.success("Signed in with Google successfully! 🚀");
-    } catch (err) {
-      const errorMessage =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "فشل تسجيل الدخول بواسطة جوجل 🔐";
-      toast.error(errorMessage);
-    } finally {
-      setGoogleLoading(false);
-    }
+    // ⚠️ استبدل هذا الرابط برابط الباكيند الفعلي المرفوع على Vercel
+    const BACKEND_VERCEL_URL = "https://mttw-backend.vercel.app";
+
+    // توجيه المتصفح مباشرة لبوابة جوجل في الباكيند
+    window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google`;
   };
 
   return (
