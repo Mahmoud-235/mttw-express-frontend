@@ -68,7 +68,7 @@ export default function Login() {
     setGoogleLoading(true);
 
     // ⚠️ استبدل هذا الرابط برابط الباكيند الفعلي المرفوع على Vercel
-    const BACKEND_VERCEL_URL = "https://mttw-backend.vercel.app";
+    const BACKEND_VERCEL_URL = "https://ecosense-backend.vercel.app";
 
     // توجيه المتصفح مباشرة لبوابة جوجل في الباكيند
     window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google`;
