@@ -1,0 +1,253 @@
+/* AppLayout */
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  transition: width 0.3s var(--ease);
+  z-index: 50;
+}
+.collapsed .sidebar { width: 68px; }
+
+/* Logo */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+.logoMark svg { width: 32px; height: 32px; flex-shrink: 0; }
+.logoText {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.logoText span { color: var(--green-400); }
+.collapseBtn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 22px; height: 22px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--t-fast);
+  flex-shrink: 0;
+}
+.collapseBtn:hover { border-color: var(--green-500); color: var(--green-400); }
+
+/* Role badge */
+.roleBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin: 12px 12px 4px;
+  background: var(--green-glow);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.roleText {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--green-400);
+  letter-spacing: 0.12em;
+}
+
+/* Nav */
+.nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.navGroup { display: flex; flex-direction: column; gap: 2px; }
+.navBottom { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+.navGroupLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px 10px 4px;
+}
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--r-md);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--t-fast);
+  position: relative;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.navItem:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+.navItem.active {
+  background: var(--green-glow);
+  color: var(--green-400);
+  border: 1px solid var(--border);
+}
+.navItem.active .navIcon { color: var(--green-400); }
+.navIcon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.navItem.active .navIcon,
+.navItem:hover .navIcon { opacity: 1; }
+.navLabel { flex: 1; }
+.badge {
+  background: var(--red-500);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: var(--r-full);
+  font-family: var(--font-data);
+}
+.logoutBtn { color: var(--text-muted); }
+.logoutBtn:hover { color: var(--red-400); background: rgba(239,68,68,0.08); }
+
+/* User card */
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+.avatar {
+  width: 34px; height: 34px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--green-700), var(--teal-500));
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+}
+.userInfo { overflow: hidden; min-width: 0; }
+.userName {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.userEmail {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Main ── */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Topbar */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.topbarLeft, .topbarRight {
+  display: flex; align-items: center; gap: 16px;
+}
+.systemStatus {
+  display: flex; align-items: center; gap: 8px;
+}
+.statusText {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--green-400);
+  letter-spacing: 0.06em;
+}
+.alertBtn {
+  position: relative;
+  color: var(--text-secondary);
+  display: flex;
+  padding: 6px;
+  border-radius: var(--r-md);
+  transition: all var(--t-fast);
+}
+.alertBtn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.alertCount {
+  position: absolute;
+  top: 2px; right: 2px;
+  background: var(--red-500);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.topbarUser { display: flex; align-items: center; gap: 8px; }
+.avatarSm {
+  width: 30px; height: 30px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--green-700), var(--teal-500));
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.topbarName { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+
+/* Content */
+.content {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34,197,94,0.06) 0%, transparent 60%), var(--bg-base);
+}

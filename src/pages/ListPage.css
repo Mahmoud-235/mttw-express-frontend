@@ -1,0 +1,47 @@
+.list-page { display:flex; flex-direction:column; gap:24px; }
+.list-page__header { display:flex; justify-content:space-between; align-items:flex-start; }
+.list-page__title  { font-family:var(--font-display); font-size:1.5rem; font-weight:800; color:var(--text-primary); }
+.list-page__sub    { font-size:0.85rem; color:var(--text-muted); margin-top:4px; }
+
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+
+.item-card { display:flex; flex-direction:column; gap:10px; cursor:default; }
+.item-card__header { display:flex; justify-content:space-between; align-items:center; }
+.item-card__icon { width:36px;height:36px; background:var(--accent-dim); border-radius:9px; display:flex;align-items:center;justify-content:center; color:var(--accent); flex-shrink:0; }
+.item-card__actions { display:flex; gap:6px; }
+.item-card__name   { font-family:var(--font-display); font-size:1rem; font-weight:700; color:var(--text-primary); }
+.item-card__meta   { display:flex; flex-wrap:wrap; gap:10px; }
+.item-card__meta span { display:flex; align-items:center; gap:4px; font-size:0.78rem; color:var(--text-muted); }
+.item-card__worker { font-size:0.8rem; color:var(--text-muted); border-top:1px solid var(--border); padding-top:8px; margin-top:2px; }
+.item-card__worker--empty { font-style:italic; }
+
+.empty-state {
+  text-align:center; padding:60px 20px;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  color:var(--text-muted);
+}
+.empty-state h3 { font-family:var(--font-display); font-size:1.1rem; color:var(--text-secondary); }
+.empty-state p  { font-size:0.85rem; max-width:300px; }
+
+.modal-form { display:flex; flex-direction:column; gap:16px; }
+.modal-form__row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.modal-form__footer { display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
+
+/* data table */
+.data-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+.data-table th {
+  text-align:left; padding:10px 14px;
+  font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--text-muted); background:var(--g2); border-bottom:1px solid var(--border);
+}
+.data-table td { padding:12px 14px; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:middle; }
+.data-table tr:hover td { background:var(--g3); }
+.data-table tr:last-child td { border-bottom:none; }
+
+.table-wrap {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden;
+}
+
+/* filters bar */
+.filters { display:flex; gap:12px; flex-wrap:wrap; }

@@ -1,0 +1,34 @@
+.modal-overlay {
+  position: fixed; inset:0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex; align-items:center; justify-content:center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+.modal {
+  background: var(--g2);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.modal--sm { max-width:380px; }
+.modal--md { max-width:520px; }
+.modal--lg { max-width:720px; }
+.modal__header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.modal__title  { font-family:var(--font-display); font-weight:700; font-size:1.05rem; color:var(--text-primary); }
+.modal__close  {
+  width:32px;height:32px; border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-muted); transition:all var(--transition);
+}
+.modal__close:hover { color:var(--text-primary); background:var(--g3); }
+.modal__body   { padding: 24px; }

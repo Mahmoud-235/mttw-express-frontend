@@ -1,0 +1,2 @@
+.wrap{background:var(--bg-card);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:20px;}
+.title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:16px;}
