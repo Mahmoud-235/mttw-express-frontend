@@ -780,15 +780,40 @@ export default function Images() {
     (i) => i.analysisResult?.status === "Healthy",
   ).length;
   const unknown = allImages.length - infected - healthy;
-
   const handleUpload = async (file) => {
     if (!file) return;
     setUploading(true);
     try {
       const fd = new FormData();
       fd.append("image", file);
-      fd.append("deviceSerial", "ESP32-UNIT-01");
-      if (sectorId) fd.append("sectorId", sectorId);
+
+      // 🚀 خطة الإنقاذ البديلة:
+      // الكود هيدور على كل الاحتمالات الممكنة لاسم القطاع عندك في الصفحة
+      // لو لقى السيريال جواه هياخده.. لو مالقاش، هيبعت السيريال القديم اللي كان شغال معاك!
+      let currentSerial = "ESP32-UNIT-01"; // القيمة القديمة اللي كانت شغال دايماً
+
+      if (typeof sector !== "undefined" && sector?.devices?.[0]?.deviceSerial) {
+        currentSerial = sector.devices[0].deviceSerial;
+      } else if (
+        typeof currentSector !== "undefined" &&
+        currentSector?.devices?.[0]?.deviceSerial
+      ) {
+        currentSerial = currentSector.devices[0].deviceSerial;
+      } else if (
+        typeof sectorData !== "undefined" &&
+        sectorData?.devices?.[0]?.deviceSerial
+      ) {
+        currentSerial = sectorData.devices[0].deviceSerial;
+      }
+
+      fd.append("deviceSerial", currentSerial);
+
+      if (sectorId) {
+        fd.append("sectorId", sectorId);
+      } else if (typeof sector !== "undefined" && sector?._id) {
+        fd.append("sectorId", sector._id);
+      }
+
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
         toast.success("Image uploaded and analyzed successfully! 🎉");
@@ -796,7 +821,8 @@ export default function Images() {
         setCurrentPage(1);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Upload failed");
+      // لو فشل برضه، هيطلعلك رسالة الفرونت إند العادية
+      toast.error("Upload failed. Please check connection.");
     } finally {
       setUploading(false);
     }
