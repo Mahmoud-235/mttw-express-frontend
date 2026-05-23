@@ -65,9 +65,10 @@ export default function Register() {
   };
 
   // 2. دالة التحقق من كود الـ OTP وتفعيل الحساب
+  // 2. دالة التحقق من كود الـ OTP وتفعيل الحساب والدخول فوراً
   const handleVerify = async (e) => {
     e.preventDefault();
-    e.stopPropagation(); // تأمين الـ Event
+    e.stopPropagation();
 
     if (loading) return;
     setLoading(true);
@@ -78,20 +79,25 @@ export default function Register() {
         registrationToken: regToken,
       });
 
+      // ⚠️ تأكد إن الباكيند بيرجع الاسماء دي بالظبط (token و user)
       const authToken = res.data?.token;
       const userData = res.data?.user;
 
       if (authToken) {
-        // حفظ البيانات في الـ Local Storage لتثبيت الجلسة
+        // 1. حفظ البيانات في الـ Local Storage
         localStorage.setItem("ecosense_token", authToken);
         localStorage.setItem("ecosense_user", JSON.stringify(userData));
 
         toast.success("Account verified! Welcome to EcoSense 🌿");
 
-        // التوجيه السلس للـ Dashboard بدون عمل Full Reload يطير التوست
+        // 2. التوجيه المباشر والسرى للـ Dashboard
         navigate("/dashboard", { replace: true });
+
+        // 3. تحديث الصفحة تحديث كامل (جبري) عشان الـ AuthContext يقرا التوكن الجديد ويدخله علطول
+        window.location.reload();
       } else {
-        toast.success("Account verified! You can now sign in.");
+        // لو الباكيند مش بيبعت توكن، كدا كدا لازم يروح للوجين
+        toast.success("Account verified successfully! 🎉");
         navigate("/login", { replace: true });
       }
     } catch (err) {
