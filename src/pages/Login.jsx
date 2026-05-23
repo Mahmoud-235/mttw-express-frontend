@@ -52,6 +52,9 @@ export default function Login() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle();
+      const BACKEND_VERCEL_URL = "https://mttw-backend.vercel.app";
+
+      window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google`;
       toast.success("Signed in with Google successfully! 🚀");
     } catch (err) {
       const errorMessage =
