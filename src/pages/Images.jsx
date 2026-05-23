@@ -637,7 +637,7 @@ export default function Images() {
       const fd = new FormData();
       fd.append("image", file);
       // ✅ بنبعت sectorId مع الصورة — الـ API بيستقبله في حالة الـ manual scan
-      fd.append("sectorId", sectorId);
+      fd.append("deviceSerial", "فف");
 
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
