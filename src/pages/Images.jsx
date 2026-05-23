@@ -636,8 +636,24 @@ export default function Images() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-      // ✅ بنبعت sectorId مع الصورة — الـ API بيستقبله في حالة الـ manual scan
-      fd.append("deviceSerial", "فف");
+
+      // 🚀 السحر هنا: بنبحث في قائمة الأجهزة عن الجهاز المربوط بالقطاع المختار حالياً
+      // تأكد أن اسم مصفوفة الأجهزة عندك مطابق (لو اسم المتغير عندك مش devices غيره هنا)
+      const matchedDevice = devices?.find(
+        (dev) => dev.sectorId?._id === sectorId || dev.sectorId === sectorId,
+      );
+
+      // لو لقى الجهاز هياخد السيريال الحقيقي بتاعه (مثال: "ESP32-UNIT-03" أو "فف")
+      // لو مالقاش جهاز للقطاع ده، هيحط قيمة احتياطية عشان الـ Request ما يضربش
+      const currentSerial = matchedDevice?.deviceSerial;
+
+      fd.append("deviceSerial", currentSerial);
+
+      // بنبعت الـ sectorId برضه عشان الباك إند محتاجه
+      fd.append("sectorId", sectorId);
+
+      // (اختياري للـ Debugging) عشان تشوف في الـ Console السيريال اللي اتقفش كام
+      console.log("Matched Serial for sector:", sectorId, "is:", currentSerial);
 
       const response = await imagesAPI.upload(fd);
       if (response.data?.success || response.status === 201) {
@@ -655,7 +671,6 @@ export default function Images() {
       setUploading(false);
     }
   };
-
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
