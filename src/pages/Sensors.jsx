@@ -933,17 +933,15 @@ function HistoryPanel({ sectorId }) {
   const rows = data?.data || [];
   const total = data?.totalRecords || 0;
   const pages = Math.ceil(total / LIMIT);
-  const chartData = [...rows]
-    .reverse()
-    .map((h) => ({
-      time: new Date(h.createdAt).toLocaleTimeString("en", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      Temp: h.air?.temperature,
-      Humidity: h.air?.humidity,
-      Soil: h.soil?.moisture,
-    }));
+  const chartData = [...rows].reverse().map((h) => ({
+    time: new Date(h.createdAt).toLocaleTimeString("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    Temp: h.air?.temperature,
+    Humidity: h.air?.humidity,
+    Soil: h.soil?.moisture,
+  }));
 
   return (
     <div
@@ -1445,14 +1443,42 @@ export default function Sensors() {
   const resolvedForManual =
     liveLatest?.sectorId?._id || liveLatest?.sectorId || sectorId || null;
 
+  /* ── دالة التحليل اليدوي المحدثة ── */
   const handleManualAnalyze = useCallback(async () => {
     if (!resolvedForManual)
       return toast.error("No sector detected yet — waiting for a reading");
+
     setManualAnalyzing(true);
     try {
-      await sensorsAPI.analyze(resolvedForManual);
-      toast.success("AI Analysis complete!");
-      refreshLive?.();
+      const response = await sensorsAPI.analyze(resolvedForManual);
+
+      // 🌟 استخراج بيانات تحليل الحساسات القادمة من السيرفر
+      // (تأكد من مطابقة المسار حسب الـ Response المرتجع من الكنترولر عندك، غالباً يكون بالهيكل ده)
+      const aiReport =
+        response.data?.data?.aiAnalysis || response.data?.analysis;
+
+      if (aiReport) {
+        const status = aiReport.status || "Danger";
+        const recommendation =
+          aiReport.recommendation || "يوجد خلل في قراءات الحساسات، يرجى الفحص.";
+
+        // 🚨 الشرط الذكي: لو التحليل مطلع أي مشكلة أو حالة غير مستقرة (مش Healthy)
+        if (status !== "Healthy") {
+          toast.error(`🚨 تنبيه الـ AI: ${recommendation}`, {
+            duration: 8000, // مدة أطول لقراءة التوصيات الزراعية كاملة
+          });
+        } else {
+          // 🌱 لو كل القراءات مثالية والـ AI مطمنك
+          toast.success(
+            "🌱 تحليل الحساسات سليم: المؤشرات حيوية وممتازة للنمو!",
+          );
+        }
+      } else {
+        // رسالة احتياطية في حال نجاح الطلب وبدون تفاصيل ممررة
+        toast.success("AI Analysis complete!");
+      }
+
+      if (refreshLive) refreshLive();
     } catch (e) {
       toast.error(e.response?.data?.message || "Analysis failed");
     } finally {
