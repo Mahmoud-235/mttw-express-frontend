@@ -628,9 +628,9 @@ export default function Images() {
   const handleUpload = async (file) => {
     if (!file) return;
 
-    // ✅ لازم يختار قطاع الأول
+    // 1️⃣ لازم يختار قطاع الأول
     if (!sectorId) {
-      toast.error("Please select a sector before uploading an image.");
+      toast.error("الرجاء اختيار القطاع أولاً قبل رفع الصورة.");
       return;
     }
 
@@ -639,45 +639,59 @@ export default function Images() {
       const fd = new FormData();
       fd.append("image", file);
 
-      // 🚀 السحر اشتغل هنا: بنبحث في قائمة الأجهزة (devices) المجلوبة فوق عن المطابق للقطاع
-      const matchedDevice = devices?.find(
-        (dev) => dev.sectorId?._id === sectorId || dev.sectorId === sectorId,
-      );
+      // 2️⃣ تأمين البحث عن الجهاز المرتبط بالقطاع
+      // البحث يدعم لو dev.sectorId عبارة عن Object (بسبب الـ populate) أو مجرد String ID
+      const matchedDevice =
+        devices && devices.length > 0
+          ? devices.find((dev) => {
+              const devSectorId = dev.sectorId?._id || dev.sectorId;
+              return devSectorId?.toString() === sectorId.toString();
+            })
+          : null;
 
-      // لو لقى الجهاز بياخد السيريال الحقيقي بتاعه الفريد (زي "فف" أو "ESP32-UNIT-03")
-      // ولو القطاع ملوش جهاز، هيديله سيريال افتراضي احتياطي عشان الباك إند ما يضربش 400 أو 500
+      // 3️⃣ تحديد السيريال (يفضل تنبيه المالك/العامل لو القطاع ملوش جهاز فعلي)
+      if (!matchedDevice) {
+        console.warn(
+          `⚠️ No device registered for Sector: [${sectorId}]. Using fallback serial.`,
+        );
+        // لو عايز تمنع الرفع تماماً لو مفيش جهاز، فك الكومنت عن السطرين اللي تحت:
+        // toast.error("هذا القطاع لا يحتوي على أجهزة مسجلة، لا يمكن رفع الصورة.");
+        // setUploading(false); return;
+      }
+
       const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
 
       fd.append("deviceSerial", currentSerial);
-
-      // بنبعت الـ sectorId برضه عشان الباك إند محتاجه
       fd.append("sectorId", sectorId);
 
       console.log(
         `🚀 Sending dynamically -> Serial: [${currentSerial}] for Sector: [${sectorId}]`,
       );
 
+      // 4️⃣ إرسال البيانات للباك إند
       const response = await imagesAPI.upload(fd);
-      if (response.data?.success || response.status === 201) {
-        toast.success("Image uploaded & analyzed successfully! 🎉");
-        refetch();
-        setCurrentPage(1);
+
+      // دعم الطريقتين للتأكد من النجاح حسب شكل الـ Axios response عندك
+      if (
+        response.data?.success ||
+        response.status === 200 ||
+        response.status === 201
+      ) {
+        toast.success("تم رفع الصورة وتحليلها بنجاح! 🎉");
+
+        if (refetch) await refetch(); // تحديث قائمة الصور فوراً
+        if (setCurrentPage) setCurrentPage(1); // العودة للصفحة الأولى في الـ Pagination
       }
     } catch (error) {
+      console.error("❌ Upload Error:", error);
       const msg =
         error.response?.data?.message ||
         error.response?.data?.error ||
-        "Upload failed.";
+        "فشلت عملية الرفع، يرجى المحاولة مرة أخرى.";
       toast.error(msg);
     } finally {
       setUploading(false);
     }
-  };
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("image/")) handleUpload(file);
   };
 
   const handleDelete = async () => {
