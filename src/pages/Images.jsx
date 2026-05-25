@@ -637,9 +637,23 @@ export default function Images() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-      fd.append("sectorId", sectorId); // 🌟 بنبعت معرف القطاع بس!
+      fd.append("sectorId", sectorId);
 
-      console.log(`🚀 Sending Image for Sector: [${sectorId}]`);
+      // 🚀 السحر هنا: بنبحث جوه مصفوفة الأجهزة (devices) عن الجهاز اللي تبع القطاع ده
+      // تأكد أن قائمة الـ devices موجودة عندك في الـ state بتاعة المكون
+      const matchedDevice = devices?.find(
+        (dev) => (dev.sectorId?._id || dev.sectorId) === sectorId,
+      );
+
+      // لو لقى جهاز بياخد السيريال بتاعه، لو ملقاش بيبعت سيريال احتياطي عشان السيرفر ما يرفضش الطلب
+      const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
+
+      // 🌟 بنبعت السيريال صراحة في الـ FormData
+      fd.append("deviceSerial", currentSerial);
+
+      console.log(
+        `🚀 Sending Image for Sector: [${sectorId}] with Serial: [${currentSerial}]`,
+      );
 
       const response = await imagesAPI.upload(fd);
 
