@@ -9,6 +9,8 @@ import { TableSkeleton } from "../components/ui/Skeleton";
 import { timeAgo } from "../utils/helpers";
 import toast from "react-hot-toast";
 
+const EMPTY_FORM = { deviceSerial: "", deviceName: "", sectorId: "" };
+
 export default function Devices() {
   const { data, loading, refetch } = useFetch(devicesAPI.getAll);
   const { data: sData } = useFetch(sectorsAPI.getAll);
@@ -16,34 +18,37 @@ export default function Devices() {
   const sectors = sData?.data || [];
 
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({
-    deviceSerial: "",
-    deviceName: "",
-    sectorId: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [delId, setDelId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  // 🔥 تحسين لوجيك الحفظ والإغلاق والتحديث الفوري
+  const closeModal = () => {
+    setModal(false);
+    setForm(EMPTY_FORM);
+  };
+
   const handleCreate = async () => {
-    if (!form.deviceSerial.trim() || !form.sectorId) {
-      return toast.error("الرقم التسلسلي والقطاع مطلوبان!");
+    if (!form.deviceSerial.trim()) {
+      return toast.error("الرقم التسلسلي مطلوب!");
+    }
+    if (!form.sectorId) {
+      return toast.error("يجب اختيار قطاع!");
     }
 
     setSaving(true);
     try {
       await devicesAPI.create(form);
-      toast.success("تم تسجيل الجهاز بنجاح! 🎉");
 
-      // 1. إعادة جلب البيانات فوراً ليظهر الجهاز في الجدول
+      // ✅ أولاً: أغلق النافذة وصفّر الفورم فوراً عشان تجربة المستخدم تكون سريعة
+      closeModal();
+
+      // ✅ ثانياً: جيب البيانات الجديدة (في الخلفية، النافذة اتقفلت بالفعل)
       await refetch();
 
-      // 2. إغلاق النافذة وتصفير الفورم
-      setModal(false);
-      setForm({ deviceSerial: "", deviceName: "", sectorId: "" });
+      toast.success("تم تسجيل الجهاز بنجاح! 🎉");
     } catch (e) {
       toast.error(e.response?.data?.message || "فشل في تسجيل الجهاز");
     } finally {
@@ -55,9 +60,9 @@ export default function Devices() {
     setDeleting(true);
     try {
       await devicesAPI.delete(delId);
-      toast.success("تم حذف الجهاز بنجاح");
-      await refetch();
       setDelId(null);
+      await refetch();
+      toast.success("تم حذف الجهاز بنجاح");
     } catch (e) {
       toast.error(e.response?.data?.message || "فشل الحذف");
     } finally {
@@ -70,6 +75,7 @@ export default function Devices() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="page-title">IoT Devices</h2>
@@ -185,16 +191,21 @@ export default function Devices() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className={`badge ${d.status === "online" ? "badge-green" : "badge-gray"}`}
+                        className={`badge ${
+                          d.status === "online" ? "badge-green" : "badge-gray"
+                        }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${d.status === "online" ? "bg-forest-500 animate-pulse" : "bg-sage-400"}`}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            d.status === "online"
+                              ? "bg-forest-500 animate-pulse"
+                              : "bg-sage-400"
+                          }`}
                         />
                         {d.status}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-sage-600">
-                      {/* ✅ قراءة اسم القطاع بشكل آمن ومتوافق مع الـ Populate للباك إند */}
                       {d.sectorId?.name || d.sectorInfo?.name || "—"}
                     </td>
                     <td className="px-5 py-3.5 text-xs text-sage-400">
@@ -216,24 +227,23 @@ export default function Devices() {
         )}
       </div>
 
-      {/* نافذة التسجيل */}
+      {/* Register Modal */}
       <Modal
         open={modal}
-        onClose={() => {
-          setModal(false);
-          setForm({ deviceSerial: "", deviceName: "", sectorId: "" });
-        }}
+        onClose={closeModal}
         title="Register IoT Device"
         size="sm"
       >
         <div className="space-y-4">
           <div>
-            <label className="label">Device Serial Number</label>
+            <label className="label">Device Serial Number *</label>
             <input
               className="input font-mono"
               placeholder="ECOSENSE-NODE-001"
               value={form.deviceSerial}
               onChange={set("deviceSerial")}
+              // ✅ دعم الإرسال بـ Enter
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
           </div>
           <div>
@@ -243,10 +253,11 @@ export default function Devices() {
               placeholder="North Sector Node"
               value={form.deviceName}
               onChange={set("deviceName")}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
           </div>
           <div>
-            <label className="label">Assign to Sector</label>
+            <label className="label">Assign to Sector *</label>
             <select
               className="input"
               value={form.sectorId}
@@ -260,20 +271,30 @@ export default function Devices() {
               ))}
             </select>
           </div>
-          <button
-            className="btn-primary w-full justify-center"
-            onClick={handleCreate}
-            disabled={saving}
-          >
-            {saving ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              "Register Device"
-            )}
-          </button>
+          <div className="flex gap-3 pt-1">
+            <button
+              className="btn-ghost flex-1 justify-center"
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn-primary flex-1 justify-center"
+              onClick={handleCreate}
+              disabled={saving}
+            >
+              {saving ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                "Register Device"
+              )}
+            </button>
+          </div>
         </div>
       </Modal>
 
+      {/* Delete Confirm */}
       <ConfirmDialog
         open={!!delId}
         onClose={() => setDelId(null)}
