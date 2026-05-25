@@ -250,21 +250,6 @@ const GT = {
   },
 };
 
-const checkAndShowAiToast = (analysisData) => {
-  if (!analysisData) return;
-  const status = analysisData.status || "Unknown";
-  const recommendation =
-    analysisData.recommendation || "يوجد خلل في القراءات، يرجى مراجعة الحقل.";
-
-  // 🚨 الشرط الذكي الموحد: يظهر فقط لو مش Safe أو Healthy
-  if (status !== "Healthy" && status !== "Safe") {
-    toast.error(`🚨 تنبيه الـ AI: ${recommendation}`, {
-      duration: 8000,
-      id: "ai-sensor-alert", // لمنع تكرار نفس التوست على الشاشة بشكل مزعج
-    });
-  }
-};
-
 /* ── Status map ── */
 const STATUS_MAP = {
   Safe: "Safe",
@@ -696,7 +681,6 @@ function LivePanel({ sectorId, onRegisterRefresh, onLatestChange }) {
       setAnalyzing(true);
       try {
         await sensorsAPI.analyze(sid);
-        checkAndShowAiToast(aiData);
         refetch();
         refetchHistory();
       } catch {
@@ -1463,22 +1447,34 @@ export default function Sensors() {
   const handleManualAnalyze = useCallback(async () => {
     if (!resolvedForManual)
       return toast.error("No sector detected yet — waiting for a reading");
+
     setManualAnalyzing(true);
     try {
-      const res = await sensorsAPI.analyze(resolvedForManual);
-      const aiData =
-        res.data?.data?.aiAnalysis ||
-        res.data?.analysis ||
-        res.data?.data?.analysisResult;
+      const response = await sensorsAPI.analyze(resolvedForManual);
 
-      if (aiData) {
-        const status = aiData.status || "Unknown";
-        if (status !== "Healthy" && status !== "Safe") {
-          checkAndShowAiToast(aiData);
+      // 🌟 استخراج بيانات تحليل الحساسات القادمة من السيرفر
+      // (تأكد من مطابقة المسار حسب الـ Response المرتجع من الكنترولر عندك، غالباً يكون بالهيكل ده)
+      const aiReport =
+        response.data?.data?.aiAnalysis || response.data?.analysis;
+
+      if (aiReport) {
+        const status = aiReport.status || "Danger";
+        const recommendation =
+          aiReport.recommendation || "يوجد خلل في قراءات الحساسات، يرجى الفحص.";
+
+        // 🚨 الشرط الذكي: لو التحليل مطلع أي مشكلة أو حالة غير مستقرة (مش Healthy)
+        if (status !== "Healthy") {
+          toast.error(`🚨 تنبيه الـ AI: ${recommendation}`, {
+            duration: 8000, // مدة أطول لقراءة التوصيات الزراعية كاملة
+          });
         } else {
-          toast.success("🌱 قراءات الحساسات سليمة والوضع آمن تماماً!");
+          // 🌱 لو كل القراءات مثالية والـ AI مطمنك
+          toast.success(
+            "🌱 تحليل الحساسات سليم: المؤشرات حيوية وممتازة للنمو!",
+          );
         }
       } else {
+        // رسالة احتياطية في حال نجاح الطلب وبدون تفاصيل ممررة
         toast.success("AI Analysis complete!");
       }
 
