@@ -625,6 +625,7 @@ export default function Images() {
   ).length;
 
   /* ── Upload ── */
+  /* ── Upload ── */
   const handleUpload = async (file) => {
     if (!file) return;
 
@@ -639,16 +640,13 @@ export default function Images() {
       fd.append("image", file);
       fd.append("sectorId", sectorId);
 
-      // 🚀 السحر هنا: بنبحث جوه مصفوفة الأجهزة (devices) عن الجهاز اللي تبع القطاع ده
-      // تأكد أن قائمة الـ devices موجودة عندك في الـ state بتاعة المكون
+      // 🚀 البحث عن الجهاز المربوط بالقطاع المختار
       const matchedDevice = devices?.find(
         (dev) => (dev.sectorId?._id || dev.sectorId) === sectorId,
       );
 
-      // لو لقى جهاز بياخد السيريال بتاعه، لو ملقاش بيبعت سيريال احتياطي عشان السيرفر ما يرفضش الطلب
+      // تعيين السيريال المناسب أو الاحتياطي
       const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
-
-      // 🌟 بنبعت السيريال صراحة في الـ FormData
       fd.append("deviceSerial", currentSerial);
 
       console.log(
@@ -662,21 +660,35 @@ export default function Images() {
         response.status === 200 ||
         response.status === 201
       ) {
-        toast.success("تم رفع الصورة وتحليلها بنجاح! 🎉");
+        // استخراج بيانات تحليل الـ AI من السيرفر
+        const aiResult = response.data?.data?.analysisResult;
+
+        if (aiResult) {
+          const status = aiResult.status;
+          const disease = aiResult.diseaseName || "تحليل غير متاح";
+          const confidence = aiResult.confidence
+            ? aiResult.confidence.toFixed(0)
+            : 0;
+
+          // 🚨 الشرط الذكي: يشتغل فقط لو الحالة مش Healthy (أي إصابة أو شك)
+          if (status !== "Healthy") {
+            toast.error(
+              `🚨 تنبيه: تم رصد مشكلة أو إصابة بالقطاع! التشخيص: ${disease} (${confidence}%)`,
+              { duration: 7000 }, // مدة 7 ثوانٍ عشان تلفت الانتباه ويقرأها المزارع
+            );
+          }
+          // 💡 ملحوظة: لو الحالة "Healthy" الكود هيتجاهل التوست تماماً ويمشي بهدوء
+        }
+
+        // تحديث البيانات في الخلفية فوراً
         if (refetch) await refetch();
       }
     } catch (error) {
-      const msg = error.response?.data?.message || "فشلت عملية الرفع.";
+      const msg = error.response?.data?.message || "فشلت عملية الرفع والتحليل.";
       toast.error(msg);
     } finally {
       setUploading(false);
     }
-  };
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("image/")) handleUpload(file);
   };
 
   const handleDelete = async () => {
