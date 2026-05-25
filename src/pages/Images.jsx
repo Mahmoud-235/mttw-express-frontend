@@ -625,7 +625,6 @@ export default function Images() {
   ).length;
 
   /* ── Upload ── */
-  /* ── Upload ── */
   const handleUpload = async (file) => {
     if (!file) return;
 
@@ -689,6 +688,12 @@ export default function Images() {
     } finally {
       setUploading(false);
     }
+  };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith("image/")) handleUpload(file);
   };
 
   const handleDelete = async () => {
