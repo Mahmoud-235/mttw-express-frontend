@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, Cpu, Wifi, WifiOff, Radio } from "lucide-react";
 import { useFetch } from "../hooks/useFetch";
 import { devicesAPI, sectorsAPI } from "../services/api";
@@ -12,8 +12,13 @@ import toast from "react-hot-toast";
 const EMPTY_FORM = { deviceSerial: "", deviceName: "", sectorId: "" };
 
 export default function Devices() {
+  // 🟢 حيلة الـ trigger لإجبار أي كاش أو Hook على إعادة الجلب الفوري من السيرفر
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // استدعاء الـ useFetch مع ربطه بالـ refreshKey إذا كان يدعم خيارات التحديث
   const { data, loading, refetch } = useFetch(devicesAPI.getAll);
   const { data: sData } = useFetch(sectorsAPI.getAll);
+
   const devices = data?.data || [];
   const sectors = sData?.data || [];
 
@@ -22,6 +27,13 @@ export default function Devices() {
   const [delId, setDelId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // تحديث البيانات تلقائياً عند تغير الـ refreshKey كخطوة أمان إضافية
+  useEffect(() => {
+    if (refetch) {
+      refetch();
+    }
+  }, [refreshKey]);
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
@@ -40,46 +52,43 @@ export default function Devices() {
 
     setSaving(true);
     try {
-      // ✅ الـ create بس جوه الـ try
-      await devicesAPI.create(form);
+      // 1️⃣ إرسال الطلب للباك إند
+      const response = await devicesAPI.create(form);
+
+      // تأكيد النجاح للمستخدم وإغلاق النافذة فوراً لراحة العين
       toast.success("تم تسجيل الجهاز بنجاح! 🎉");
       closeModal();
+
+      // 2️⃣ إجبار الفرونت إند على إعادة طلب البيانات بالكامل
+      if (refetch) {
+        await refetch();
+      }
+      // تغيير الـ key لتحديث الـ useEffect في حال كان الـ refetch معلقاً
+      setRefreshKey((prev) => prev + 1);
     } catch (e) {
-      // ✅ لو فشل الـ create فعلاً، هيجي هنا
+      console.error("Registration Error:", e);
       toast.error(e.response?.data?.message || "فشل في تسجيل الجهاز");
+    } finally {
       setSaving(false);
-      return; // ⛔ وقّف هنا، متكملش
     }
-
-    // ✅ الـ refetch برره تماماً عشان لو فشل ميوريش رسالة غلط
-    try {
-      await refetch();
-    } catch {
-      // الجهاز اتسجل، بس الـ refetch فشل — مش مشكلة، سيتحدث عند أي action تاني
-    }
-
-    setSaving(false);
   };
 
   const handleDelete = async () => {
     setDeleting(true);
     try {
       await devicesAPI.delete(delId);
-      setDelId(null);
       toast.success("تم حذف الجهاز بنجاح");
+      setDelId(null);
+
+      if (refetch) {
+        await refetch();
+      }
+      setRefreshKey((prev) => prev + 1);
     } catch (e) {
       toast.error(e.response?.data?.message || "فشل الحذف");
+    } finally {
       setDeleting(false);
-      return;
     }
-
-    try {
-      await refetch();
-    } catch {
-      // تجاهل فشل الـ refetch
-    }
-
-    setDeleting(false);
   };
 
   const online = devices.filter((d) => d.status === "online").length;
@@ -203,16 +212,10 @@ export default function Devices() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className={`badge ${
-                          d.status === "online" ? "badge-green" : "badge-gray"
-                        }`}
+                        className={`badge ${d.status === "online" ? "badge-green" : "badge-gray"}`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            d.status === "online"
-                              ? "bg-forest-500 animate-pulse"
-                              : "bg-sage-400"
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full ${d.status === "online" ? "bg-forest-500 animate-pulse" : "bg-sage-400"}`}
                         />
                         {d.status}
                       </span>
