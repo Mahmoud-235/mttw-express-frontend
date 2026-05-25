@@ -628,7 +628,6 @@ export default function Images() {
   const handleUpload = async (file) => {
     if (!file) return;
 
-    // 1️⃣ لازم يختار قطاع الأول
     if (!sectorId) {
       toast.error("الرجاء اختيار القطاع أولاً قبل رفع الصورة.");
       return;
@@ -638,56 +637,22 @@ export default function Images() {
     try {
       const fd = new FormData();
       fd.append("image", file);
+      fd.append("sectorId", sectorId); // 🌟 بنبعت معرف القطاع بس!
 
-      // 2️⃣ تأمين البحث عن الجهاز المرتبط بالقطاع
-      // البحث يدعم لو dev.sectorId عبارة عن Object (بسبب الـ populate) أو مجرد String ID
-      const matchedDevice =
-        devices && devices.length > 0
-          ? devices.find((dev) => {
-              const devSectorId = dev.sectorId?._id || dev.sectorId;
-              return devSectorId?.toString() === sectorId.toString();
-            })
-          : null;
+      console.log(`🚀 Sending Image for Sector: [${sectorId}]`);
 
-      // 3️⃣ تحديد السيريال (يفضل تنبيه المالك/العامل لو القطاع ملوش جهاز فعلي)
-      if (!matchedDevice) {
-        console.warn(
-          `⚠️ No device registered for Sector: [${sectorId}]. Using fallback serial.`,
-        );
-        // لو عايز تمنع الرفع تماماً لو مفيش جهاز، فك الكومنت عن السطرين اللي تحت:
-        // toast.error("هذا القطاع لا يحتوي على أجهزة مسجلة، لا يمكن رفع الصورة.");
-        // setUploading(false); return;
-      }
-
-      const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
-
-      fd.append("deviceSerial", currentSerial);
-      fd.append("sectorId", sectorId);
-
-      console.log(
-        `🚀 Sending dynamically -> Serial: [${currentSerial}] for Sector: [${sectorId}]`,
-      );
-
-      // 4️⃣ إرسال البيانات للباك إند
       const response = await imagesAPI.upload(fd);
 
-      // دعم الطريقتين للتأكد من النجاح حسب شكل الـ Axios response عندك
       if (
         response.data?.success ||
         response.status === 200 ||
         response.status === 201
       ) {
         toast.success("تم رفع الصورة وتحليلها بنجاح! 🎉");
-
-        if (refetch) await refetch(); // تحديث قائمة الصور فوراً
-        if (setCurrentPage) setCurrentPage(1); // العودة للصفحة الأولى في الـ Pagination
+        if (refetch) await refetch();
       }
     } catch (error) {
-      console.error("❌ Upload Error:", error);
-      const msg =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "فشلت عملية الرفع، يرجى المحاولة مرة أخرى.";
+      const msg = error.response?.data?.message || "فشلت عملية الرفع.";
       toast.error(msg);
     } finally {
       setUploading(false);
