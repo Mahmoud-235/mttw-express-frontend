@@ -40,20 +40,25 @@ export default function Devices() {
 
     setSaving(true);
     try {
+      // ✅ الـ create بس جوه الـ try
       await devicesAPI.create(form);
-
-      // ✅ أولاً: أغلق النافذة وصفّر الفورم فوراً عشان تجربة المستخدم تكون سريعة
-      closeModal();
-
-      // ✅ ثانياً: جيب البيانات الجديدة (في الخلفية، النافذة اتقفلت بالفعل)
-      await refetch();
-
       toast.success("تم تسجيل الجهاز بنجاح! 🎉");
+      closeModal();
     } catch (e) {
+      // ✅ لو فشل الـ create فعلاً، هيجي هنا
       toast.error(e.response?.data?.message || "فشل في تسجيل الجهاز");
-    } finally {
       setSaving(false);
+      return; // ⛔ وقّف هنا، متكملش
     }
+
+    // ✅ الـ refetch برره تماماً عشان لو فشل ميوريش رسالة غلط
+    try {
+      await refetch();
+    } catch {
+      // الجهاز اتسجل، بس الـ refetch فشل — مش مشكلة، سيتحدث عند أي action تاني
+    }
+
+    setSaving(false);
   };
 
   const handleDelete = async () => {
@@ -61,13 +66,20 @@ export default function Devices() {
     try {
       await devicesAPI.delete(delId);
       setDelId(null);
-      await refetch();
       toast.success("تم حذف الجهاز بنجاح");
     } catch (e) {
       toast.error(e.response?.data?.message || "فشل الحذف");
-    } finally {
       setDeleting(false);
+      return;
     }
+
+    try {
+      await refetch();
+    } catch {
+      // تجاهل فشل الـ refetch
+    }
+
+    setDeleting(false);
   };
 
   const online = devices.filter((d) => d.status === "online").length;
@@ -242,7 +254,6 @@ export default function Devices() {
               placeholder="ECOSENSE-NODE-001"
               value={form.deviceSerial}
               onChange={set("deviceSerial")}
-              // ✅ دعم الإرسال بـ Enter
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
           </div>
