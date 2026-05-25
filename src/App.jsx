@@ -18,23 +18,30 @@ import { LanguageProvider } from "./pages/LandingPage";
 // 🛡️ حماية المسارات الأساسية
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
-
-  if (loading) return null; // نترك التحكم في التحميل لـ AppRoutes
-
+  if (loading) return null;
   return user ? children : <Navigate to="/login" replace />;
 }
 
 // 👑 حماية مسارات المالك
 function OwnerRoute({ children }) {
   const { user, loading } = useAuth();
-
   if (loading) return null;
-
   return user?.role === "owner" ? (
     children
   ) : (
     <Navigate to="/dashboard" replace />
   );
+}
+
+// 🚪 حماية صفحات الـ auth — لو مسجل دخول يروح للـ Landing Page الخارجية
+function GuestRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) {
+    window.location.replace("https://ecosensedabab.netlify.app/");
+    return null;
+  }
+  return children;
 }
 
 function AppRoutes() {
@@ -50,16 +57,24 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+
       <Route
         path="/login"
-        element={user ? <Navigate to="/dashboard" replace /> : <Login />}
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
       />
       <Route
         path="/register"
-        element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
       />
 
-      {/* هنا التعديل: جعلنا كل شيء تحت AppLayout كمستوى واحد */}
       <Route
         element={
           <PrivateRoute>
