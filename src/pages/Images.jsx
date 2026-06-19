@@ -162,6 +162,7 @@ function getStatusClass(status) {
   return "unknown";
 }
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
+/* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
   if (!log) return null;
 
@@ -169,7 +170,6 @@ function ImageDetailModal({ log, onClose }) {
   const status = res.status;
   const sk = getStatusClass(status);
 
-  // 🚀 القراءة مباشرة من الـ Object الجديد اللي عملناه في الباكيند بديل الـ Regex القديم
   const greenRatio = res.ratios?.green ?? 0;
   const yellowRatio = res.ratios?.yellow ?? 0;
   const brownRatio = res.ratios?.brown ?? 0;
@@ -177,7 +177,6 @@ function ImageDetailModal({ log, onClose }) {
   const hasColorData =
     greenRatio > 0 || yellowRatio > 0 || brownRatio > 0 || damagedRatio > 0;
 
-  // التوصيات كـ Array أو نص عادي
   const recommendations = Array.isArray(res.recommendations)
     ? res.recommendations
     : [res.recommendation || ""];
@@ -185,7 +184,12 @@ function ImageDetailModal({ log, onClose }) {
   const treatmentPlan = res.treatmentPlan || [];
   const captureTips = res.captureTips || [];
 
-  const conf = res.confidence ? Math.round(res.confidence) : 0;
+  // ✨ حل مشكلة الـ 1%: لو القيمة كسر عشري (أقل من أو تساوي 1) نضربها في 100
+  const rawConf = res.confidence || 0;
+  const conf =
+    rawConf <= 1 && rawConf > 0
+      ? Math.round(rawConf * 100)
+      : Math.round(rawConf);
 
   const statusColor =
     sk === "healthy"
@@ -216,17 +220,36 @@ function ImageDetailModal({ log, onClose }) {
       <div
         className="ds-modal"
         style={{
-          maxWidth: "800px",
+          maxWidth: "850px",
+          width: "100%",
+          height: "80vh", // ✨ تثبيت ارتفاع المودال ليتناسق مع الصورة
+          maxHeight: "650px",
           display: "grid",
-          gridTemplateColumns: "1fr 1.2fr",
+          gridTemplateColumns: "1.1fr 1.2fr", // ضبط التوازن بين الصورة والكلام
+          overflow: "hidden", // منع أي خروج للعناصر
+          borderRadius: "16px",
+          background: "#fff",
         }}
       >
-        {/* الجانب الأيسر: الصورة */}
-        <div className="ds-modal-img-side" style={{ position: "relative" }}>
+        {/* الجانب الأيسر: الصورة المستقرة */}
+        <div
+          className="ds-modal-img-side"
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            background: "#f7f7f7",
+          }}
+        >
           <img
             src={log.imageUrl}
             alt="Leaf Diagnostic Scan"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
           />
           <button
             onClick={onClose}
@@ -238,12 +261,14 @@ function ImageDetailModal({ log, onClose }) {
               height: 34,
               borderRadius: 10,
               border: "none",
-              background: "rgba(0,0,0,.5)",
+              background: "rgba(0,0,0,.6)",
               color: "#fff",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              zIndex: 10,
+              transition: "background 0.2s",
             }}
           >
             <X size={16} />
@@ -254,8 +279,8 @@ function ImageDetailModal({ log, onClose }) {
         <div
           className="ds-modal-body"
           style={{
-            maxHeight: "85vh",
-            overflowY: "auto",
+            height: "100%", // ملء نص المودال بالكامل
+            overflowY: "auto", // السكرول هنا فقط للكلام وليس للمودال كله
             padding: "24px",
             display: "flex",
             flexDirection: "column",
@@ -413,7 +438,6 @@ function ImageDetailModal({ log, onClose }) {
               </div>
             </div>
           ) : (
-            // Fallback للتوصيات العادية لو مفيش خطة مفصلة
             recommendations[0] && (
               <div
                 style={{
@@ -577,6 +601,7 @@ function ImageDetailModal({ log, onClose }) {
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 12,
+              marginTop: "auto", // دفع الكارد لأسفل المودال بشكل شيك لو المساحة سمحت
             }}
           >
             {[
@@ -632,7 +657,6 @@ function ImageDetailModal({ log, onClose }) {
     </div>
   );
 }
-
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   const res = log.analysisResult || {};
