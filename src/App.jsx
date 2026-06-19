@@ -13,6 +13,7 @@ import Images from "./pages/Images";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Workers from "./pages/Workers";
+import ForgotPassword from "./pages/ForgotPassword";
 import { LanguageProvider } from "./pages/LandingPage";
 
 // 🛡️ حماية المسارات الأساسية
@@ -107,6 +108,7 @@ function AppRoutes() {
         />
       </Route>
 
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
