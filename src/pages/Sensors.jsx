@@ -15,6 +15,8 @@ import {
   WifiOff,
   Zap,
   TrendingUp,
+  ShieldAlert, // ◄ إضافة الأيقونة المفقودة
+  ArrowUpRight,
 } from "lucide-react";
 import { useFetch } from "../hooks/useFetch";
 import { useAuth } from "../context/AuthContext";
@@ -251,17 +253,19 @@ const GT = {
 };
 
 /* ── Status map ── */
+/* ── Status map المطور ── */
 const STATUS_MAP = {
   Safe: "Safe",
   Healthy: "Safe",
   Warning: "Warning",
-  "High Stress": "Warning",
+  "High Stress": "Danger", // تم توجيهها للـ Danger لأن التقرير يطلب تدخلاً فورياً
   Danger: "Danger",
   Critical: "Danger",
 };
 const statusKey = (s) => STATUS_MAP[s] || "Unknown";
 
 /* ── Gauge ── */
+/* ── SensorGauge المطور ── */
 function SensorGauge({
   icon: Icon,
   label,
@@ -269,11 +273,17 @@ function SensorGauge({
   unit,
   color = "green",
   max = 100,
-  threshold,
+  minThreshold, // حد أدنى (مثل رطوبة التربة)
+  maxThreshold, // حد أقصى (مثل درجة الحرارة)
 }) {
   const num = parseFloat(value);
   const pct = isNaN(num) ? 0 : Math.min(100, Math.max(0, (num / max) * 100));
-  const isAlert = threshold && !isNaN(num) && num > threshold;
+
+  // التحقق من الخطورة (سواء أعلى من المسموح أو أقل من المسموح)
+  const isTooHigh = maxThreshold && !isNaN(num) && num > maxThreshold;
+  const isTooLow = minThreshold && !isNaN(num) && num < minThreshold;
+  const isAlert = isTooHigh || isTooLow;
+
   const t = isAlert ? GT.rose : GT[color] || GT.green;
 
   return (
@@ -294,6 +304,8 @@ function SensorGauge({
           style={{ width: `${pct}%`, background: t.bar }}
         />
       </div>
+
+      {/* رسالة تنبيه ديناميكية ذكية */}
       {isAlert && (
         <p
           style={{
@@ -306,8 +318,10 @@ function SensorGauge({
             gap: 4,
           }}
         >
-          <AlertTriangle size={10} /> Above safe threshold ({threshold}
-          {unit})
+          <AlertTriangle size={10} />
+          {isTooHigh
+            ? `أعلى من الحد الآمن (${maxThreshold}${unit})`
+            : `أقل من الحد الآمن (${minThreshold}${unit})`}
         </p>
       )}
       <div
@@ -401,8 +415,10 @@ function AnalysisBanner({ latest, analyzing }) {
   }, [latest?.analysis?.status]);
 
   if (!latest) return null;
+
   const sk = statusKey(latest.analysis?.status);
   const StatusIcon = sk === "Safe" ? CheckCircle2 : AlertTriangle;
+
   const iconColor =
     sk === "Safe"
       ? "var(--c-primary)"
@@ -422,14 +438,33 @@ function AnalysisBanner({ latest, analyzing }) {
         ? "#5a3800"
         : "#6b0000";
 
+  // استخراج الداتا الجديدة من الرسبونس
+  const actions = Array.isArray(latest.analysis?.actions)
+    ? latest.analysis.actions
+    : [];
+  const riskFactors = Array.isArray(latest.analysis?.risk_factors)
+    ? latest.analysis.risk_factors
+    : [];
+  const safetyLayer = latest.analysis?.safety_layer || {};
+
   return (
-    <div className={`ds-analysis ${sk}`}>
+    <div
+      className={`ds-analysis ${sk}`}
+      style={{
+        direction: "rtl",
+        padding: "20px",
+        borderRadius: "16px",
+        background: flash ? "rgba(230, 126, 34, 0.1)" : "",
+      }}
+    >
+      {/* الهيدر الأساسي للبانر */}
       <div
         style={{
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 14,
+          flexWrap: "wrap",
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
@@ -459,11 +494,12 @@ function AnalysisBanner({ latest, analyzing }) {
             >
               <p
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 11,
                   fontWeight: 800,
                   textTransform: "uppercase",
                   letterSpacing: ".07em",
                   color: "var(--c-ink-40)",
+                  margin: 0,
                 }}
               >
                 AI Health Assessment
@@ -474,23 +510,30 @@ function AnalysisBanner({ latest, analyzing }) {
               </span>
               {analyzing && (
                 <span className="ds-auto-badge">
-                  <span className="ds-spin" /> Analyzing…
+                  <span className="ds-spin" /> جاري التحليل…
                 </span>
               )}
             </div>
+
+            {/* التوصية العامة */}
             <p
               style={{
-                fontSize: 13.5,
+                fontSize: 14,
                 lineHeight: 1.65,
                 color: textColor,
-                fontWeight: 500,
+                fontWeight: 600,
+                margin: "0 0 10px 0",
               }}
             >
-              {latest.analysis?.recommendation || "Awaiting analysis…"}
+              {latest.analysis?.general_recommendation ||
+                latest.analysis?.recommendation ||
+                "Awaiting analysis…"}
             </p>
           </div>
         </div>
-        <div style={{ flexShrink: 0, textAlign: "right" }}>
+
+        {/* الميتا داتا (الوقت، الجهاز، القطاع) */}
+        <div style={{ flexShrink: 0, textAlign: "left", marginRight: "auto" }}>
           <div
             style={{
               display: "flex",
@@ -514,6 +557,7 @@ function AnalysisBanner({ latest, analyzing }) {
                 fontSize: 11,
                 color: "var(--c-ink-40)",
                 justifyContent: "flex-end",
+                marginBottom: 4,
               }}
             >
               <Cpu size={10} />
@@ -526,41 +570,187 @@ function AnalysisBanner({ latest, analyzing }) {
                   border: "1px solid var(--c-border)",
                 }}
               >
-                {latest.deviceId.deviceSerial}
+                {typeof latest.deviceId === "object"
+                  ? latest.deviceId.deviceSerial
+                  : latest.deviceId}
               </code>
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background:
-                    latest.deviceId.status === "online"
-                      ? "var(--c-primary)"
-                      : "var(--c-ink-20)",
-                  animation:
-                    latest.deviceId.status === "online"
-                      ? "ds-pulse 1.5s ease-in-out infinite"
-                      : "none",
-                }}
-              />
             </div>
           )}
           {latest.sectorId && (
             <div
-              style={{ fontSize: 11, color: "var(--c-ink-40)", marginTop: 3 }}
+              style={{
+                fontSize: 11,
+                color: "var(--c-ink-40)",
+                marginTop: 3,
+                textAlign: "left",
+              }}
             >
-              📍 {latest.sectorId.name} · {latest.sectorId.cropType}
+              📍 {latest.sectorId.name || "قطاع"} ·{" "}
+              {latest.sectorId.cropType || "نبات"}
             </div>
           )}
         </div>
       </div>
+
+      {/* ── سيكشن 1: عوامل الخطورة الحرجة (Risk Factors) ── */}
+      {riskFactors.length > 0 && (
+        <div
+          style={{
+            marginTop: "16px",
+            background: "#fff0f0",
+            border: "1px solid #ffcccc",
+            borderRadius: "12px",
+            padding: "12px",
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 8px 0",
+              fontSize: "12.5px",
+              fontWeight: "800",
+              color: "#b71c1c",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <ShieldAlert size={14} /> عوامل الخطورة التي تم رصدها:
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: "8px",
+            }}
+          >
+            {riskFactors.map((risk) => (
+              <div
+                key={risk._id}
+                style={{
+                  background: "#fff",
+                  padding: "8px 10px",
+                  borderRadius: "8px",
+                  borderRight: `3px solid ${risk.severity === "critical" ? "#d32f2f" : "#f57c00"}`,
+                  fontSize: "12px",
+                }}
+              >
+                <span style={{ fontWeight: "700", color: "var(--c-ink)" }}>
+                  {risk.label}
+                </span>
+                <div
+                  style={{
+                    color: "var(--c-ink-60)",
+                    marginTop: "2px",
+                    fontSize: "11px",
+                  }}
+                >
+                  القيمة الحالية:{" "}
+                  <strong style={{ color: "#d32f2f" }}>{risk.value}</strong>{" "}
+                  (المثالي: {risk.ideal_range})
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── سيكشن 2: الإجراءات الفورية المطلوبة (Actions) ── */}
+      {actions.length > 0 && (
+        <div
+          style={{
+            marginTop: "12px",
+            background: "#f4f9f4",
+            border: "1px solid #e1efe1",
+            borderRadius: "12px",
+            padding: "12px",
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 8px 0",
+              fontSize: "12.5px",
+              fontWeight: "800",
+              color: "#1e4620",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Activity size={14} /> الإجراءات الفورية المطلوبة:
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {actions.map((act) => (
+              <div
+                key={act._id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "#fff",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid #e8f5e9",
+                }}
+              >
+                <ArrowUpRight
+                  size={14}
+                  style={{
+                    color:
+                      act.priority === 1 ? "var(--c-red)" : "var(--c-primary)",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: "12.5px",
+                    fontWeight: "700",
+                    color: "var(--c-ink)",
+                  }}
+                >
+                  {act.title} :
+                </span>
+                <span style={{ fontSize: "12px", color: "var(--c-ink-60)" }}>
+                  {act.details}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── سيكشن 3: طبقة الأمان الذكية (Safety Layer Override) ── */}
+      {safetyLayer.applied && (
+        <div
+          style={{
+            marginTop: "10px",
+            fontSize: "11px",
+            color: "var(--c-ink-40)",
+            background: "rgba(0,0,0,0.03)",
+            padding: "6px 12px",
+            borderRadius: "6px",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>🛡️ تم تطبيق طبقة الأمان التلقائية نظراً لحرج القراءات.</span>
+          <span>
+            وضع الحساسات الحالي:{" "}
+            <strong>{safetyLayer.sensor_model_status}</strong>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ── History Row ── */
+/* ── 2. History Row المطور لجدول القراءات ── */
 function HistoryRow({ row }) {
   const sk = statusKey(row.analysis?.status);
+
+  // استخراج السيريال والاسم سواء كان كائن أو قيمة نصية مباشرة لعدم حدوث الكراش
+  const serial = row.deviceId?.deviceSerial || row.deviceId || "—";
+  const sectorName = row.sectorId?.name || "—";
+
   return (
     <tr>
       <td>
@@ -611,7 +801,13 @@ function HistoryRow({ row }) {
         </span>
       </td>
       <td>
-        <span style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
+        <span
+          style={{
+            fontSize: 12,
+            color: "var(--c-ink-40)",
+            textTransform: "capitalize",
+          }}
+        >
           {row.light || "—"}
         </span>
       </td>
@@ -621,21 +817,28 @@ function HistoryRow({ row }) {
           {row.analysis?.status || "Unknown"}
         </span>
       </td>
-      <td style={{ maxWidth: 200 }}>
+      <td style={{ maxWidth: 220 }}>
+        {/* جعلنا التوصية تقرأ الـ general_recommendation لو الـ recommendation طويلة جداً */}
         <p
           style={{
             fontSize: 12,
-            color: "var(--c-ink-40)",
+            color: "var(--c-ink-60)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            margin: 0,
           }}
+          title={
+            row.analysis?.general_recommendation || row.analysis?.recommendation
+          }
         >
-          {row.analysis?.recommendation || "—"}
+          {row.analysis?.general_recommendation ||
+            row.analysis?.recommendation ||
+            "—"}
         </p>
       </td>
       <td>
-        {row.deviceId?.deviceSerial ? (
+        {serial !== "—" ? (
           <code
             style={{
               background: "var(--c-surface2)",
@@ -645,7 +848,7 @@ function HistoryRow({ row }) {
               border: "1px solid var(--c-border)",
             }}
           >
-            {row.deviceId.deviceSerial}
+            {serial}
           </code>
         ) : (
           "—"
@@ -654,7 +857,6 @@ function HistoryRow({ row }) {
     </tr>
   );
 }
-
 /* ── Live Panel ── */
 function LivePanel({ sectorId, onRegisterRefresh, onLatestChange }) {
   const [analyzing, setAnalyzing] = useState(false);
