@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import React, { useEffect } from "react";
 import {
   Upload,
@@ -163,10 +164,8 @@ function getStatusClass(status) {
   return "unknown";
 }
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
-/* ─── Image Detail Modal ─────────────────────────────────────────────────── */
-/* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
-  // ✨ منع السكرول في الخلفية تماماً طول ما المودال مفتوح، وبيرجع طبيعي لما يقفل
+  // منع السكرول في الخلفية تماماً طول ما المودال مفتوح، وبيرجع طبيعي لما يقفل
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -175,7 +174,6 @@ function ImageDetailModal({ log, onClose }) {
   }, []);
 
   if (!log) return null;
-  console.log("🚀 API Response data inside Modal:", log.analysisResult);
 
   const res = log.analysisResult || {};
   const status = res.status;
@@ -191,7 +189,6 @@ function ImageDetailModal({ log, onClose }) {
   const recommendations = Array.isArray(res.recommendations)
     ? res.recommendations
     : [res.recommendation || ""];
-
   const treatmentPlan = res.treatmentPlan || [];
   const captureTips = res.captureTips || [];
 
@@ -222,50 +219,60 @@ function ImageDetailModal({ log, onClose }) {
   const StatusIcon =
     sk === "healthy" ? CheckCircle : sk === "infected" ? AlertCircle : Cpu;
 
-  return (
+  // 🚀 السحر هنا: استخدام createPortal عشان يترمي في الـ body مباشرة بعيد عن خناقات الـ CSS
+  return createPortal(
     <div
-      className="ds-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
       style={{
-        // 🎯 التثبيت المطلق في منتصف الشاشة والـ Viewport تماماً
-        position: "fixed",
+        position: "fixed", // تثبيت مطلق بالنسبة للشاشة المرئية فقط
         top: 0,
         left: 0,
+        right: 0,
+        bottom: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(0, 0, 0, 0.55)", // سواد شفاف للخلفية
-        backdropFilter: "blur(4px)", // تأثير ضبابي جمالي لخلفية المودال
+        background: "rgba(0, 0, 0, 0.65)", // سواد شفاف رايق للخلفية
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999, // لضمان ظهوره فوق أي عنصر آخر في الصفحة
+        alignItems: "center", // السنتر العمودي للشاشة المرئية بالظبط
+        justifyContent: "center", // السنتر الأفقي للشاشة المرئية بالظبط
+        zIndex: 99999999, // قيمة فلكية عشان يظهر فوق أي سكرول وصور
         padding: "20px",
         boxSizing: "border-box",
       }}
     >
       <div
-        className="ds-modal"
         style={{
           maxWidth: "850px",
           width: "100%",
-          height: "80vh",
+          height: "85vh",
           maxHeight: "650px",
           display: "grid",
-          gridTemplateColumns: "1.1fr 1.2fr",
+          gridTemplateColumns: "1fr", // افتراضي للموبايل
           overflow: "hidden",
-          borderRadius: "16px",
+          borderRadius: "20px",
           background: "#fff",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)", // ظل ناعم للمودال
+          boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
+          // كود الـ Responsive بالـ CSS العادي لتقسيم المودال على الشاشات الكبيرة
         }}
+        className="my-custom-forced-modal"
       >
+        {/* استايل إضافي داخلي سريع عشان نضمن تقسيم الشاشة بدون الاعتماد على الكلاس القديم المكسور */}
+        <style>{`
+          .my-custom-forced-modal { display: grid !important; grid-template-columns: 1fr !important; }
+          @media(min-width: 640px) {
+            .my-custom-forced-modal { grid-template-columns: 1.1fr 1.2fr !important; }
+          }
+        `}</style>
+
         {/* الجانب الأيسر: الصورة المستقرة */}
         <div
-          className="ds-modal-img-side"
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
-            background: "#f7f7f7",
+            background: "#0d1a0b",
           }}
         >
           <img
@@ -295,7 +302,6 @@ function ImageDetailModal({ log, onClose }) {
               alignItems: "center",
               justifyContent: "center",
               zIndex: 10,
-              transition: "background 0.2s",
             }}
           >
             <X size={16} />
@@ -304,10 +310,9 @@ function ImageDetailModal({ log, onClose }) {
 
         {/* الجانب الأيمن: البيانات والتحليلات */}
         <div
-          className="ds-modal-body"
           style={{
             height: "100%",
-            overflowY: "auto", // السكرول محصور هنا فقط للكلام جوه المودال نفسه
+            overflowY: "auto",
             padding: "24px",
             display: "flex",
             flexDirection: "column",
@@ -373,7 +378,6 @@ function ImageDetailModal({ log, onClose }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                flexShrink: 0,
               }}
             >
               <X size={15} />
@@ -406,7 +410,7 @@ function ImageDetailModal({ log, onClose }) {
             </div>
           )}
 
-          {/* 📋 خطة العلاج والتوصيات */}
+          {/* خطة العلاج والتوصيات */}
           {treatmentPlan.length > 0 ? (
             <div
               style={{
@@ -503,7 +507,7 @@ function ImageDetailModal({ log, onClose }) {
             )
           )}
 
-          {/* 📊 مؤشرات تحليل الألوان المباشرة */}
+          {/* مؤشرات تحليل الألوان المباشرة */}
           {hasColorData && (
             <div>
               <p
@@ -569,119 +573,10 @@ function ImageDetailModal({ log, onClose }) {
               </div>
             </div>
           )}
-
-          {/* 💡 نصائح التصوير */}
-          {captureTips.length > 0 && (
-            <div
-              style={{
-                borderTop: "1px solid var(--c-border)",
-                paddingTop: "12px",
-              }}
-            >
-              <p
-                className="ds-label"
-                style={{ marginBottom: 6, color: "var(--c-amber)" }}
-              >
-                💡 نصائح لالتقاط صور أكثر دقة:
-              </p>
-              <ul
-                style={{
-                  margin: 0,
-                  paddingRight: "18px",
-                  fontSize: "11px",
-                  color: "var(--c-ink-40)",
-                  listStyleType: "disc",
-                  direction: "rtl",
-                }}
-              >
-                {captureTips.map((tip, idx) => (
-                  <li key={idx} style={{ marginBottom: "2px" }}>
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* التنبيه التحذيري الزراعي */}
-          {res.note && (
-            <div
-              style={{
-                background: "#f4f9ff",
-                border: "1px solid #e2efff",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                fontSize: "11px",
-                color: "#2b6cb0",
-                lineHeight: "1.5",
-              }}
-            >
-              ⚠️ {res.note}
-            </div>
-          )}
-
-          {/* بيانات القطاع وجهاز التصوير */}
-          <div
-            style={{
-              paddingTop: 14,
-              borderTop: "1px solid var(--c-border)",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 12,
-              marginTop: "auto",
-            }}
-          >
-            {[
-              {
-                label: "Sector",
-                value: `📍 ${log.sectorId?.name || "Unknown"}`,
-              },
-              {
-                label: "Scan Mode",
-                value:
-                  log.captureReason === "Automatic Camera"
-                    ? "📷 Automated IoT"
-                    : "📱 Manual App",
-              },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="ds-label" style={{ marginBottom: 3 }}>
-                  {label}
-                </p>
-                <p
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    color: "var(--c-ink-60)",
-                  }}
-                >
-                  {value}
-                </p>
-              </div>
-            ))}
-            {log.capturedBy && (
-              <div
-                style={{
-                  gridColumn: "span 2",
-                  paddingTop: 10,
-                  borderTop: "1px dashed var(--c-border)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 11.5,
-                  color: "var(--c-ink-40)",
-                }}
-              >
-                <User size={11} /> Operator:{" "}
-                <strong style={{ color: "var(--c-ink-60)" }}>
-                  {log.capturedBy.firstName} {log.capturedBy.lastName}
-                </strong>
-              </div>
-            )}
-          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body, // 🚀 السحر هنا: بنطير المودال برا الصفحة كلها ونرميه تحت الـ body علطول
   );
 }
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
