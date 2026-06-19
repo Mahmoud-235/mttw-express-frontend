@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import React, { useEffect } from "react";
 import {
   Upload,
   ImageIcon,
@@ -163,7 +164,16 @@ function getStatusClass(status) {
 }
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
+/* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
+  // ✨ منع السكرول في الخلفية تماماً طول ما المودال مفتوح، وبيرجع طبيعي لما يقفل
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, []);
+
   if (!log) return null;
   console.log("🚀 API Response data inside Modal:", log.analysisResult);
 
@@ -185,7 +195,6 @@ function ImageDetailModal({ log, onClose }) {
   const treatmentPlan = res.treatmentPlan || [];
   const captureTips = res.captureTips || [];
 
-  // ✨ حل مشكلة الـ 1%: لو القيمة كسر عشري (أقل من أو تساوي 1) نضربها في 100
   const rawConf = res.confidence || 0;
   const conf =
     rawConf <= 1 && rawConf > 0
@@ -217,19 +226,36 @@ function ImageDetailModal({ log, onClose }) {
     <div
       className="ds-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        // 🎯 التثبيت المطلق في منتصف الشاشة والـ Viewport تماماً
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(0, 0, 0, 0.55)", // سواد شفاف للخلفية
+        backdropFilter: "blur(4px)", // تأثير ضبابي جمالي لخلفية المودال
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999, // لضمان ظهوره فوق أي عنصر آخر في الصفحة
+        padding: "20px",
+        boxSizing: "border-box",
+      }}
     >
       <div
         className="ds-modal"
         style={{
           maxWidth: "850px",
           width: "100%",
-          height: "80vh", // ✨ تثبيت ارتفاع المودال ليتناسق مع الصورة
+          height: "80vh",
           maxHeight: "650px",
           display: "grid",
-          gridTemplateColumns: "1.1fr 1.2fr", // ضبط التوازن بين الصورة والكلام
-          overflow: "hidden", // منع أي خروج للعناصر
+          gridTemplateColumns: "1.1fr 1.2fr",
+          overflow: "hidden",
           borderRadius: "16px",
           background: "#fff",
+          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)", // ظل ناعم للمودال
         }}
       >
         {/* الجانب الأيسر: الصورة المستقرة */}
@@ -280,8 +306,8 @@ function ImageDetailModal({ log, onClose }) {
         <div
           className="ds-modal-body"
           style={{
-            height: "100%", // ملء نص المودال بالكامل
-            overflowY: "auto", // السكرول هنا فقط للكلام وليس للمودال كله
+            height: "100%",
+            overflowY: "auto", // السكرول محصور هنا فقط للكلام جوه المودال نفسه
             padding: "24px",
             display: "flex",
             flexDirection: "column",
@@ -375,12 +401,12 @@ function ImageDetailModal({ log, onClose }) {
                 <div
                   className="ds-color-fill"
                   style={{ width: `${conf}%`, background: statusColor }}
-                />
+                ></div>
               </div>
             </div>
           )}
 
-          {/* 📋 خطة العلاج والتوصيات (Treatment Plan) */}
+          {/* 📋 خطة العلاج والتوصيات */}
           {treatmentPlan.length > 0 ? (
             <div
               style={{
@@ -477,7 +503,7 @@ function ImageDetailModal({ log, onClose }) {
             )
           )}
 
-          {/* 📊 مؤشرات تحليل الألوان المباشرة (Telemetries) */}
+          {/* 📊 مؤشرات تحليل الألوان المباشرة */}
           {hasColorData && (
             <div>
               <p
@@ -544,7 +570,7 @@ function ImageDetailModal({ log, onClose }) {
             </div>
           )}
 
-          {/* 💡 نصائح التصوير (Capture Tips) */}
+          {/* 💡 نصائح التصوير */}
           {captureTips.length > 0 && (
             <div
               style={{
@@ -602,7 +628,7 @@ function ImageDetailModal({ log, onClose }) {
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
               gap: 12,
-              marginTop: "auto", // دفع الكارد لأسفل المودال بشكل شيك لو المساحة سمحت
+              marginTop: "auto",
             }}
           >
             {[
