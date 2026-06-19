@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { AlertTriangle, X } from "lucide-react";
 
 export function ConfirmDialog({
@@ -9,26 +10,29 @@ export function ConfirmDialog({
   confirmLabel = "Delete",
   loading,
 }) {
-  // إذا كان المودال مغلقاً لا ترسم أي شيء
   if (!open) return null;
 
-  return (
+  // المكون بالكامل معزول وهيترمي مباشرة في الـ body عشان يظهر في نص الشاشة المرئية بالظبط
+  return createPortal(
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
         backgroundColor: "rgba(10, 20, 8, 0.65)",
         backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)", // لدعم متصفحات Safari
+        WebkitBackdropFilter: "blur(4px)",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "center", // توسيط عمودي في الشاشة المرئية
+        justifyContent: "center", // توسيط أفقي في الشاشة المرئية
         padding: "16px",
-        zIndex: 999999, // قيمة ضخمة للتأكد من ظهوره فوق كل شيء
+        zIndex: 9999999, // أعلى من أي شيء آخر في الموقع
       }}
-      onClick={onClose} // 💡 عند الضغط على الشاشة بالخارج سيغلق المودال فوراً
+      onClick={onClose} // يغلق عند الضغط على الخلفية الفارغة
     >
-      {/* جسم نافذة التأكيد */}
+      {/* الكارد الأبيض الصغير الخاص بالتأكيد */}
       <div
         style={{
           position: "relative",
@@ -37,18 +41,22 @@ export function ConfirmDialog({
           maxWidth: "400px",
           borderRadius: "16px",
           padding: "24px",
-          boxShadow: "0 24px 64px rgba(20, 29, 16, 0.15)",
+          boxShadow: "0 24px 64px rgba(20, 29, 16, 0.2)",
           border: "1px solid #dde5d8",
+          // نضمن عدم تأثره بأي سكرول خارجي
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
         }}
-        onClick={(e) => e.stopPropagation()} // 💡 يمنع إغلاق المودال عند الضغط داخله
+        onClick={(e) => e.stopPropagation()} // يمنع الإغلاق عند الضغط داخل الكارد
       >
-        {/* الهيدر أو العنوان وزر الإغلاق X */}
+        {/* الهيدر */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "between",
+            justifyContent: "space-between",
             marginBottom: "16px",
+            gap: "8px",
           }}
         >
           <h3
@@ -57,7 +65,6 @@ export function ConfirmDialog({
               fontSize: "16px",
               fontWeight: 700,
               color: "#141d10",
-              flex: 1,
             }}
           >
             {title}
@@ -80,7 +87,7 @@ export function ConfirmDialog({
           </button>
         </div>
 
-        {/* محتوى الرسالة والأيقونة */}
+        {/* الرسالة والأيقونة */}
         <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
           <div
             style={{
@@ -109,7 +116,7 @@ export function ConfirmDialog({
           </p>
         </div>
 
-        {/* أزرار التحكم */}
+        {/* الأزرار */}
         <div
           style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}
         >
@@ -136,6 +143,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body, // 🚀 السحر هنا: بيطير المودال للـ body مباشرة
   );
 }
