@@ -273,13 +273,23 @@ function SensorGauge({
   unit,
   color = "green",
   max = 100,
-  minThreshold, // حد أدنى (مثل رطوبة التربة)
-  maxThreshold, // حد أقصى (مثل درجة الحرارة)
+  minThreshold,
+  maxThreshold,
 }) {
   const num = parseFloat(value);
-  const pct = isNaN(num) ? 0 : Math.min(100, Math.max(0, (num / max) * 100));
 
-  // التحقق من الخطورة (سواء أعلى من المسموح أو أقل من المسموح)
+  // ── تحويل النصوص (high, medium, low) لنسب مئوية عشان الـ Progress Bar يشتغل صح ──
+  let pct = 0;
+  if (!isNaN(num)) {
+    pct = Math.min(100, Math.max(0, (num / max) * 100));
+  } else if (typeof value === "string") {
+    const valLower = value.toLowerCase().trim();
+    if (valLower === "high") pct = 100;
+    else if (valLower === "medium") pct = 50;
+    else if (valLower === "low") pct = 20;
+  }
+
+  // التحقق من الخطورة (للأرقام فقط)
   const isTooHigh = maxThreshold && !isNaN(num) && num > maxThreshold;
   const isTooLow = minThreshold && !isNaN(num) && num < minThreshold;
   const isAlert = isTooHigh || isTooLow;
@@ -292,7 +302,11 @@ function SensorGauge({
         <Icon size={17} style={{ color: t.icon }} />
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
-        <span className="ds-gauge-val" style={{ color: t.text }}>
+        {/* عرض القيمة سواء كانت رقم أو كلمة (High) بشكل منسق وعريض */}
+        <span
+          className="ds-gauge-val"
+          style={{ color: t.text, textTransform: "capitalize" }}
+        >
           {value ?? "—"}
         </span>
         <span className="ds-gauge-unit">{unit}</span>
@@ -398,21 +412,85 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 /* ── Analysis Banner ── */
+/* ── Analysis Banner المطور مع التوست الذكي ── */
 function AnalysisBanner({ latest, analyzing }) {
   const [flash, setFlash] = useState(false);
   const prevRef = useRef(null);
 
   useEffect(() => {
-    if (
-      latest?.analysis?.status &&
-      latest.analysis.status !== prevRef.current
-    ) {
-      prevRef.current = latest.analysis.status;
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 2500);
-      return () => clearTimeout(t);
+    if (latest?.analysis?.status) {
+      const currentStatus = latest.analysis.status;
+
+      // إذا تغيرت الحالة عن المرة السابقة
+      if (currentStatus !== prevRef.current) {
+        prevRef.current = currentStatus;
+        setFlash(true);
+        const t = setTimeout(() => setFlash(false), 2500);
+
+        // تشغيل التوست بناءً على نوع الحالة القادمة من التحليل
+        const sk = statusKey(currentStatus);
+        const recommendationText =
+          latest.analysis?.general_recommendation ||
+          latest.analysis?.recommendation ||
+          "";
+
+        if (sk === "Danger" || currentStatus === "High Stress") {
+          toast.error(`⚠️ تحذير حرج: ${currentStatus}! ${recommendationText}`, {
+            duration: 6000,
+            position: "top-center",
+            style: {
+              border: "1px solid var(--c-red)",
+              padding: "14px",
+              color: "var(--c-ink)",
+            },
+          });
+        } else if (sk === "Warning") {
+          toast.custom(
+            (t) => (
+              <div
+                className={`${t.visible ? "animate-enter" : "animate-leave"} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+                style={{
+                  direction: "rtl",
+                  borderRight: "5px solid var(--c-amber)",
+                  padding: "12px",
+                }}
+              >
+                <div>
+                  <p
+                    style={{
+                      fontWeight: 700,
+                      margin: 0,
+                      color: "var(--c-amber)",
+                    }}
+                  >
+                    ⚠️ تنبيه من النظام
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      margin: "4px 0 0 0",
+                      color: "var(--c-ink-60)",
+                    }}
+                  >
+                    {recommendationText}
+                  </p>
+                </div>
+              </div>
+            ),
+            { duration: 5000 },
+          );
+        } else if (sk === "Safe") {
+          toast.success("✅ قراءات القطاع مستقرة وفي النطاق الآمن.");
+        }
+
+        return () => clearTimeout(t);
+      }
     }
-  }, [latest?.analysis?.status]);
+  }, [
+    latest?.analysis?.status,
+    latest?.analysis?.general_recommendation,
+    latest?.analysis?.recommendation,
+  ]);
 
   if (!latest) return null;
 
@@ -438,7 +516,6 @@ function AnalysisBanner({ latest, analyzing }) {
         ? "#5a3800"
         : "#6b0000";
 
-  // استخراج الداتا الجديدة من الرسبونس
   const actions = Array.isArray(latest.analysis?.actions)
     ? latest.analysis.actions
     : [];
@@ -454,7 +531,7 @@ function AnalysisBanner({ latest, analyzing }) {
         direction: "rtl",
         padding: "20px",
         borderRadius: "16px",
-        background: flash ? "rgba(230, 126, 34, 0.1)" : "",
+        background: flash ? "rgba(231, 76, 60, 0.08)" : "",
       }}
     >
       {/* الهيدر الأساسي للبانر */}
@@ -532,7 +609,7 @@ function AnalysisBanner({ latest, analyzing }) {
           </div>
         </div>
 
-        {/* الميتا داتا (الوقت، الجهاز، القطاع) */}
+        {/* الميتا داتا */}
         <div style={{ flexShrink: 0, textAlign: "left", marginRight: "auto" }}>
           <div
             style={{
@@ -592,7 +669,7 @@ function AnalysisBanner({ latest, analyzing }) {
         </div>
       </div>
 
-      {/* ── سيكشن 1: عوامل الخطورة الحرجة (Risk Factors) ── */}
+      {/* ── سيكشن 1: عوامل الخطورة الديناميكية ── */}
       {riskFactors.length > 0 && (
         <div
           style={{
@@ -625,7 +702,7 @@ function AnalysisBanner({ latest, analyzing }) {
           >
             {riskFactors.map((risk) => (
               <div
-                key={risk._id}
+                key={risk._id || risk.label}
                 style={{
                   background: "#fff",
                   padding: "8px 10px",
@@ -634,6 +711,7 @@ function AnalysisBanner({ latest, analyzing }) {
                   fontSize: "12px",
                 }}
               >
+                {/* هنا تم الاعتماد تماماً على الـ label القادم من السيرفر لمنع الخلط بين حرارة التربة والجو */}
                 <span style={{ fontWeight: "700", color: "var(--c-ink)" }}>
                   {risk.label}
                 </span>
@@ -654,7 +732,7 @@ function AnalysisBanner({ latest, analyzing }) {
         </div>
       )}
 
-      {/* ── سيكشن 2: الإجراءات الفورية المطلوبة (Actions) ── */}
+      {/* ── سيكشن 2: الإجراءات الفورية المطلوبة ── */}
       {actions.length > 0 && (
         <div
           style={{
@@ -681,7 +759,7 @@ function AnalysisBanner({ latest, analyzing }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {actions.map((act) => (
               <div
-                key={act._id}
+                key={act._id || act.title}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -718,7 +796,7 @@ function AnalysisBanner({ latest, analyzing }) {
         </div>
       )}
 
-      {/* ── سيكشن 3: طبقة الأمان الذكية (Safety Layer Override) ── */}
+      {/* ── سيكشن 3: طبقة الأمان ── */}
       {safetyLayer.applied && (
         <div
           style={{
@@ -742,7 +820,6 @@ function AnalysisBanner({ latest, analyzing }) {
     </div>
   );
 }
-
 /* ── 2. History Row المطور لجدول القراءات ── */
 function HistoryRow({ row }) {
   const sk = statusKey(row.analysis?.status);
