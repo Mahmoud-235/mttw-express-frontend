@@ -161,22 +161,31 @@ function getStatusClass(status) {
   if (status === "Healthy") return "healthy";
   return "unknown";
 }
-
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
   if (!log) return null;
-  const status = log.analysisResult?.status;
-  const sk = getStatusClass(status);
-  const recText = log.analysisResult?.recommendation || "";
 
-  const greenRatio = parseFloat(recText.match(/أخضر\s*([\d.]+)/)?.[1] ?? 0);
-  const yellowRatio = parseFloat(recText.match(/أصفر\s*([\d.]+)/)?.[1] ?? 0);
-  const brownRatio = parseFloat(recText.match(/بني\s*([\d.]+)/)?.[1] ?? 0);
-  const hasColorData = greenRatio > 0 || yellowRatio > 0 || brownRatio > 0;
-  const cleanRec = recText.split("[تحليل الألوان")[0].trim();
-  const conf = log.analysisResult?.confidence
-    ? Math.round(log.analysisResult.confidence)
-    : 0;
+  const res = log.analysisResult || {};
+  const status = res.status;
+  const sk = getStatusClass(status);
+
+  // 🚀 القراءة مباشرة من الـ Object الجديد اللي عملناه في الباكيند بديل الـ Regex القديم
+  const greenRatio = res.ratios?.green ?? 0;
+  const yellowRatio = res.ratios?.yellow ?? 0;
+  const brownRatio = res.ratios?.brown ?? 0;
+  const damagedRatio = res.ratios?.damaged ?? 0;
+  const hasColorData =
+    greenRatio > 0 || yellowRatio > 0 || brownRatio > 0 || damagedRatio > 0;
+
+  // التوصيات كـ Array أو نص عادي
+  const recommendations = Array.isArray(res.recommendations)
+    ? res.recommendations
+    : [res.recommendation || ""];
+
+  const treatmentPlan = res.treatmentPlan || [];
+  const captureTips = res.captureTips || [];
+
+  const conf = res.confidence ? Math.round(res.confidence) : 0;
 
   const statusColor =
     sk === "healthy"
@@ -204,9 +213,21 @@ function ImageDetailModal({ log, onClose }) {
       className="ds-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="ds-modal">
-        <div className="ds-modal-img-side">
-          <img src={log.imageUrl} alt="Leaf Diagnostic Scan" />
+      <div
+        className="ds-modal"
+        style={{
+          maxWidth: "800px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1.2fr",
+        }}
+      >
+        {/* الجانب الأيسر: الصورة */}
+        <div className="ds-modal-img-side" style={{ position: "relative" }}>
+          <img
+            src={log.imageUrl}
+            alt="Leaf Diagnostic Scan"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
           <button
             onClick={onClose}
             style={{
@@ -228,7 +249,20 @@ function ImageDetailModal({ log, onClose }) {
             <X size={16} />
           </button>
         </div>
-        <div className="ds-modal-body">
+
+        {/* الجانب الأيمن: البيانات والتحليلات */}
+        <div
+          className="ds-modal-body"
+          style={{
+            maxHeight: "85vh",
+            overflowY: "auto",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+          }}
+        >
+          {/* الهيدر وحالة الـ AI */}
           <div
             style={{
               display: "flex",
@@ -253,14 +287,13 @@ function ImageDetailModal({ log, onClose }) {
               <h3
                 style={{
                   fontFamily: "'Fraunces',serif",
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 700,
                   color: "var(--c-ink)",
                   marginBottom: 4,
-                  letterSpacing: "-.2px",
                 }}
               >
-                {log.analysisResult?.diseaseName || "Healthy Leaf"}
+                {res.diseaseName || "Healthy Leaf"}
               </h3>
               <p
                 style={{
@@ -295,6 +328,7 @@ function ImageDetailModal({ log, onClose }) {
             </button>
           </div>
 
+          {/* مؤشر ثقة النموذج الرقمي */}
           {conf > 0 && (
             <div>
               <div
@@ -320,39 +354,105 @@ function ImageDetailModal({ log, onClose }) {
             </div>
           )}
 
-          {cleanRec && (
+          {/* 📋 خطة العلاج والتوصيات (Treatment Plan) */}
+          {treatmentPlan.length > 0 ? (
             <div
               style={{
                 background: "var(--c-surface2)",
                 border: "1px solid var(--c-border)",
                 borderRadius: "var(--r-md)",
-                padding: "14px 16px",
-                borderLeft: `3px solid ${statusColor}`,
+                padding: "14px",
               }}
             >
               <p
                 className="ds-label"
                 style={{
-                  marginBottom: 7,
+                  marginBottom: 10,
                   display: "flex",
                   alignItems: "center",
                   gap: 5,
+                  fontWeight: "bold",
                 }}
               >
-                <Activity size={11} /> AI Recommendation
+                <Activity size={12} /> خطة العلاج والتوصيات
               </p>
-              <p
-                style={{
-                  fontSize: 12.5,
-                  color: "var(--c-ink-60)",
-                  lineHeight: 1.65,
-                }}
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
-                {cleanRec}
-              </p>
+                {treatmentPlan.map((step, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: "8px 12px",
+                      background: "#fff",
+                      borderRadius: "8px",
+                      borderRight: `3px solid ${step.priority === 1 ? "var(--c-red)" : "var(--c-primary)"}`,
+                    }}
+                  >
+                    <h5
+                      style={{
+                        fontSize: "12.5px",
+                        fontWeight: "700",
+                        margin: 0,
+                        color: "var(--c-ink)",
+                      }}
+                    >
+                      {step.title}
+                    </h5>
+                    <p
+                      style={{
+                        fontSize: "11.5px",
+                        color: "var(--c-ink-60)",
+                        margin: "3px 0 0 0",
+                      }}
+                    >
+                      {step.details}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
+          ) : (
+            // Fallback للتوصيات العادية لو مفيش خطة مفصلة
+            recommendations[0] && (
+              <div
+                style={{
+                  background: "var(--c-surface2)",
+                  border: "1px solid var(--c-border)",
+                  borderRadius: "var(--r-md)",
+                  padding: "14px",
+                  borderLeft: `3px solid ${statusColor}`,
+                }}
+              >
+                <p
+                  className="ds-label"
+                  style={{
+                    marginBottom: 7,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <Activity size={11} /> AI Recommendation
+                </p>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: "16px",
+                    fontSize: "12.5px",
+                    color: "var(--c-ink-60)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )
           )}
 
+          {/* 📊 مؤشرات تحليل الألوان المباشرة (Telemetries) */}
           {hasColorData && (
             <div>
               <p
@@ -371,19 +471,24 @@ function ImageDetailModal({ log, onClose }) {
               >
                 {[
                   {
-                    label: "Green Ratio (Chlorophyll)",
+                    label: "الأخضر (الكلوروفيل الطبيعي)",
                     value: greenRatio,
                     color: "#2d9e2a",
                   },
                   {
-                    label: "Yellow Ratio (Chlorosis)",
+                    label: "الأصفر (بداية اصفرار/شحوب)",
                     value: yellowRatio,
                     color: "#c07a10",
                   },
                   {
-                    label: "Brown Ratio (Necrosis)",
+                    label: "البني (أنسجة ميتة/جفاف)",
                     value: brownRatio,
                     color: "#7a4010",
+                  },
+                  {
+                    label: "التالف (نسبة الضرر العامة)",
+                    value: damagedRatio,
+                    color: "var(--c-red)",
                   },
                 ].map(({ label, value, color }) => (
                   <div key={label}>
@@ -414,6 +519,57 @@ function ImageDetailModal({ log, onClose }) {
             </div>
           )}
 
+          {/* 💡 نصائح التصوير (Capture Tips) */}
+          {captureTips.length > 0 && (
+            <div
+              style={{
+                borderTop: "1px solid var(--c-border)",
+                paddingTop: "12px",
+              }}
+            >
+              <p
+                className="ds-label"
+                style={{ marginBottom: 6, color: "var(--c-amber)" }}
+              >
+                💡 نصائح لالتقاط صور أكثر دقة:
+              </p>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingRight: "18px",
+                  fontSize: "11px",
+                  color: "var(--c-ink-40)",
+                  listStyleType: "disc",
+                  direction: "rtl",
+                }}
+              >
+                {captureTips.map((tip, idx) => (
+                  <li key={idx} style={{ marginBottom: "2px" }}>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* التنبيه التحذيري الزراعي */}
+          {res.note && (
+            <div
+              style={{
+                background: "#f4f9ff",
+                border: "1px solid #e2efff",
+                padding: "10px 12px",
+                borderRadius: "8px",
+                fontSize: "11px",
+                color: "#2b6cb0",
+                lineHeight: "1.5",
+              }}
+            >
+              ⚠️ {res.note}
+            </div>
+          )}
+
+          {/* بيانات القطاع وجهاز التصوير */}
           <div
             style={{
               paddingTop: 14,
@@ -479,16 +635,21 @@ function ImageDetailModal({ log, onClose }) {
 
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
-  const sk = getStatusClass(log.analysisResult?.status);
-  const conf = log.analysisResult?.confidence
-    ? Math.round(log.analysisResult.confidence)
-    : 0;
+  const res = log.analysisResult || {};
+  const sk = getStatusClass(res.status);
+  const conf = res.confidence ? Math.round(res.confidence) : 0;
+
   const confColor =
     conf >= 80
       ? "var(--c-primary)"
       : conf >= 60
         ? "var(--c-amber)"
         : "var(--c-red)";
+
+  // عرض أول توصية في الكارت الخارجي كنبذة سريعة
+  const briefRec = Array.isArray(res.recommendations)
+    ? res.recommendations[0]
+    : res.recommendation || "";
 
   return (
     <div className={`ds-card-img ${sk}`} onClick={() => onOpenDetail(log)}>
@@ -503,7 +664,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
             ) : (
               <Cpu size={10} />
             )}
-            {log.analysisResult?.status || "Unknown"}
+            {res.status || "Unknown"}
           </span>
         </div>
         <button
@@ -539,7 +700,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
               flex: 1,
             }}
           >
-            {log.analysisResult?.diseaseName || "Healthy"}
+            {res.diseaseName || "Healthy"}
           </p>
           {conf > 0 && (
             <span
@@ -554,7 +715,8 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
             </span>
           )}
         </div>
-        {log.analysisResult?.recommendation && (
+
+        {briefRec && (
           <p
             style={{
               fontSize: 11.5,
@@ -567,9 +729,10 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
               marginBottom: 10,
             }}
           >
-            {log.analysisResult.recommendation.slice(0, 100)}…
+            {briefRec}
           </p>
         )}
+
         {conf > 0 && (
           <div className="ds-conf-bar">
             <div
@@ -578,6 +741,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
             />
           </div>
         )}
+
         <div
           style={{
             display: "flex",
@@ -600,7 +764,6 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
     </div>
   );
 }
-
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
 export default function Images() {
   useDS();
