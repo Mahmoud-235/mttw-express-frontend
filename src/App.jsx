@@ -16,16 +16,16 @@ import Workers from "./pages/Workers";
 import ForgotPassword from "./pages/ForgotPassword";
 import { LanguageProvider } from "./pages/LandingPage";
 
-// 🛡️ حماية المسارات الأساسية
+// 🛡️ حماية المسارات الأساسية للـ Dashboard
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
 
-  if (loading) return null; // نترك التحكم في التحميل لـ AppRoutes
+  if (loading) return null;
 
   return user ? children : <Navigate to="/login" replace />;
 }
 
-// 👑 حماية مسارات المالك
+// 👑 حماية مسارات صاحب المزرعة (Owner) فقط
 function OwnerRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -41,16 +41,25 @@ function OwnerRoute({ children }) {
 function AppRoutes() {
   const { user, loading } = useAuth();
 
+  // شاشة تحميل رئيسية ريثما يتحقق الـ Context من التوكن
   if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-forest-200 border-t-forest-600 rounded-full animate-spin" />
+          <span className="text-sage-600 font-medium text-sm">
+            Loading EcoSense...
+          </span>
+        </div>
       </div>
     );
 
   return (
     <Routes>
+      {/* 🌍 المسارات العامة */}
       <Route path="/" element={<LandingPage />} />
+
+      {/* 🔐 مسارات الـ Auth (توجيه تلقائي لو مسجل دخول) */}
       <Route
         path="/login"
         element={user ? <Navigate to="/dashboard" replace /> : <Login />}
@@ -59,8 +68,14 @@ function AppRoutes() {
         path="/register"
         element={user ? <Navigate to="/dashboard" replace /> : <Register />}
       />
+      <Route
+        path="/forgot-password"
+        element={
+          user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />
+        }
+      />
 
-      {/* هنا التعديل: جعلنا كل شيء تحت AppLayout كمستوى واحد */}
+      {/* 🌲 مسارات الـ Dashboard المحمية والـ Real-time Sockets */}
       <Route
         element={
           <PrivateRoute>
@@ -71,6 +86,7 @@ function AppRoutes() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
+
         <Route
           path="/sectors"
           element={
@@ -87,8 +103,10 @@ function AppRoutes() {
             </OwnerRoute>
           }
         />
+
         <Route path="/sensors" element={<Sensors />} />
         <Route path="/images" element={<Images />} />
+
         <Route
           path="/reports"
           element={
@@ -97,7 +115,9 @@ function AppRoutes() {
             </OwnerRoute>
           }
         />
+
         <Route path="/notifications" element={<Notifications />} />
+
         <Route
           path="/workers"
           element={
@@ -108,7 +128,7 @@ function AppRoutes() {
         />
       </Route>
 
-      <Route path="/forgot-password" element={<ForgotPassword />} />
+      {/* 🔄 Handling Not Found Routes */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
