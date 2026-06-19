@@ -165,6 +165,7 @@ function getStatusClass(status) {
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
   if (!log) return null;
+  console.log("🚀 API Response data inside Modal:", log.analysisResult);
 
   const res = log.analysisResult || {};
   const status = res.status;
