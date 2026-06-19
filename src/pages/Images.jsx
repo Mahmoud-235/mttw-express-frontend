@@ -20,6 +20,7 @@ import {
   Leaf,
   BarChart2,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useFetch } from "../hooks/useFetch";
 // 🔥 أضفنا devicesAPI هنا عشان ننده على جلب الأجهزة
@@ -165,7 +166,7 @@ function getStatusClass(status) {
 }
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
 function ImageDetailModal({ log, onClose }) {
-  // منع السكرول في الخلفية تماماً طول ما المودال مفتوح، وبيرجع طبيعي لما يقفل
+  // منع السكرول في الخلفية تماماً طول ما المودال مفتوح
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -175,9 +176,36 @@ function ImageDetailModal({ log, onClose }) {
 
   if (!log) return null;
 
+  // استخراج البيانات بناءً على هيكلة الـ JSON المرفق
   const res = log.analysisResult || {};
   const status = res.status;
-  const sk = getStatusClass(status);
+
+  // تحديد الكلاس والألوان بناءً على الـ status بما فيها الحالة الجديدة Detected
+  let sk = "unknown";
+  let statusColor = "var(--c-amber)";
+  let statusBg = "var(--c-amber-l)";
+  let statusBorder = "#f0d080";
+  let StatusIcon = Cpu;
+
+  if (status?.toLowerCase() === "healthy") {
+    sk = "healthy";
+    statusColor = "var(--c-primary)";
+    statusBg = "var(--c-primary-l)";
+    statusBorder = "var(--c-border2)";
+    StatusIcon = CheckCircle;
+  } else if (status?.toLowerCase() === "infected") {
+    sk = "infected";
+    statusColor = "var(--c-red)";
+    statusBg = "var(--c-red-l)";
+    statusBorder = "var(--c-red-b)";
+    StatusIcon = AlertCircle;
+  } else if (status?.toLowerCase() === "detected" || status === "Detected") {
+    sk = "detected";
+    statusColor = "#e67e22"; // برتقالي مميز للـ Detected
+    statusBg = "#fdf2e9";
+    statusBorder = "#fadbd8";
+    StatusIcon = AlertCircle;
+  }
 
   const greenRatio = res.ratios?.green ?? 0;
   const yellowRatio = res.ratios?.yellow ?? 0;
@@ -188,9 +216,12 @@ function ImageDetailModal({ log, onClose }) {
 
   const recommendations = Array.isArray(res.recommendations)
     ? res.recommendations
-    : [res.recommendation || ""];
-  const treatmentPlan = res.treatmentPlan || [];
-  const captureTips = res.captureTips || [];
+    : [];
+  const treatmentPlan = Array.isArray(res.treatmentPlan)
+    ? res.treatmentPlan
+    : [];
+  const captureTips = Array.isArray(res.captureTips) ? res.captureTips : [];
+  const note = res.note || "";
 
   const rawConf = res.confidence || 0;
   const conf =
@@ -198,75 +229,61 @@ function ImageDetailModal({ log, onClose }) {
       ? Math.round(rawConf * 100)
       : Math.round(rawConf);
 
-  const statusColor =
-    sk === "healthy"
-      ? "var(--c-primary)"
-      : sk === "infected"
-        ? "var(--c-red)"
-        : "var(--c-amber)";
-  const statusBg =
-    sk === "healthy"
-      ? "var(--c-primary-l)"
-      : sk === "infected"
-        ? "var(--c-red-l)"
-        : "var(--c-amber-l)";
-  const statusBorder =
-    sk === "healthy"
-      ? "var(--c-border2)"
-      : sk === "infected"
-        ? "var(--c-red-b)"
-        : "#f0d080";
-  const StatusIcon =
-    sk === "healthy" ? CheckCircle : sk === "infected" ? AlertCircle : Cpu;
+  function timeAgo(dateString) {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("ar-EG", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
 
-  // 🚀 السحر هنا: استخدام createPortal عشان يترمي في الـ body مباشرة بعيد عن خناقات الـ CSS
   return createPortal(
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
       style={{
-        position: "fixed", // تثبيت مطلق بالنسبة للشاشة المرئية فقط
+        position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         width: "100vw",
         height: "100vh",
-        background: "rgba(0, 0, 0, 0.65)", // سواد شفاف رايق للخلفية
+        background: "rgba(0, 0, 0, 0.65)",
         backdropFilter: "blur(5px)",
         WebkitBackdropFilter: "blur(5px)",
         display: "flex",
-        alignItems: "center", // السنتر العمودي للشاشة المرئية بالظبط
-        justifyContent: "center", // السنتر الأفقي للشاشة المرئية بالظبط
-        zIndex: 99999999, // قيمة فلكية عشان يظهر فوق أي سكرول وصور
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 99999999,
         padding: "20px",
         boxSizing: "border-box",
       }}
     >
       <div
         style={{
-          maxWidth: "850px",
+          maxWidth: "900px",
           width: "100%",
           height: "85vh",
-          maxHeight: "650px",
+          maxHeight: "700px",
           display: "grid",
-          gridTemplateColumns: "1fr", // افتراضي للموبايل
+          gridTemplateColumns: "1fr",
           overflow: "hidden",
           borderRadius: "20px",
           background: "#fff",
           boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
-          // كود الـ Responsive بالـ CSS العادي لتقسيم المودال على الشاشات الكبيرة
         }}
         className="my-custom-forced-modal"
       >
-        {/* استايل إضافي داخلي سريع عشان نضمن تقسيم الشاشة بدون الاعتماد على الكلاس القديم المكسور */}
         <style>{`
           .my-custom-forced-modal { display: grid !important; grid-template-columns: 1fr !important; }
-          @media(min-width: 640px) {
-            .my-custom-forced-modal { grid-template-columns: 1.1fr 1.2fr !important; }
+          @media(min-width: 768px) {
+            .my-custom-forced-modal { grid-template-columns: 1fr 1.3fr !important; }
           }
         `}</style>
 
-        {/* الجانب الأيسر: الصورة المستقرة */}
+        {/* الجانب الأيسر: صورة النبات المعروضة بدقة */}
         <div
           style={{
             position: "relative",
@@ -308,7 +325,7 @@ function ImageDetailModal({ log, onClose }) {
           </button>
         </div>
 
-        {/* الجانب الأيمن: البيانات والتحليلات */}
+        {/* الجانب الأيمن: تفاصيل الـ JSON بالكامل */}
         <div
           style={{
             height: "100%",
@@ -317,9 +334,10 @@ function ImageDetailModal({ log, onClose }) {
             display: "flex",
             flexDirection: "column",
             gap: "20px",
+            direction: "rtl",
           }}
         >
-          {/* الهيدر وحالة الـ AI */}
+          {/* الهيدر والحالة */}
           <div
             style={{
               display: "flex",
@@ -331,38 +349,43 @@ function ImageDetailModal({ log, onClose }) {
             <div style={{ flex: 1 }}>
               <div style={{ marginBottom: 8 }}>
                 <span
-                  className={`ds-status ${sk}`}
                   style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "5px 12px",
+                    borderRadius: "30px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    border: `1px solid ${statusBorder}`,
                     background: statusBg,
                     color: statusColor,
-                    borderColor: statusBorder,
                   }}
                 >
-                  <StatusIcon size={12} /> {status || "Unknown"}
+                  <StatusIcon size={13} /> {status || "غير معروف"}
                 </span>
               </div>
               <h3
                 style={{
-                  fontFamily: "'Fraunces',serif",
-                  fontSize: 20,
-                  fontWeight: 700,
+                  fontSize: 22,
+                  fontWeight: 800,
                   color: "var(--c-ink)",
-                  marginBottom: 4,
+                  marginBottom: 6,
                 }}
               >
-                {res.diseaseName || "Healthy Leaf"}
+                {res.diseaseName || "نبات سليم"}
               </h3>
               <p
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   color: "var(--c-ink-40)",
                   display: "flex",
                   alignItems: "center",
                   gap: 5,
                 }}
               >
-                <Calendar size={10} /> Captured{" "}
-                {log.createdAt ? timeAgo(log.createdAt) : "Just now"}
+                <Calendar size={12} /> تم الالتقاط:{" "}
+                {log.createdAt ? timeAgo(log.createdAt) : "غير مدرج"}
               </p>
             </div>
             <button
@@ -384,7 +407,7 @@ function ImageDetailModal({ log, onClose }) {
             </button>
           </div>
 
-          {/* مؤشر ثقة النموذج الرقمي */}
+          {/* نسبة التأكيد ونقاء الصورة */}
           {conf > 0 && (
             <div>
               <div
@@ -392,62 +415,81 @@ function ImageDetailModal({ log, onClose }) {
                   display: "flex",
                   justifyContent: "space-between",
                   marginBottom: 6,
+                  fontSize: 13,
                 }}
               >
-                <span className="ds-label">Model Confidence</span>
-                <span
-                  style={{ fontSize: 12, fontWeight: 800, color: statusColor }}
-                >
+                <span style={{ fontWeight: 600, color: "var(--c-ink-60)" }}>
+                  دقة فحص النموذج الذكي
+                </span>
+                <span style={{ fontWeight: 800, color: statusColor }}>
                   {conf}%
                 </span>
               </div>
-              <div className="ds-color-bar">
+              <div
+                style={{
+                  height: 6,
+                  background: "var(--c-border)",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                }}
+              >
                 <div
-                  className="ds-color-fill"
-                  style={{ width: `${conf}%`, background: statusColor }}
+                  style={{
+                    height: "100%",
+                    width: `${conf}%`,
+                    background: statusColor,
+                    borderRadius: 10,
+                  }}
                 ></div>
               </div>
             </div>
           )}
 
-          {/* خطة العلاج والتوصيات */}
-          {treatmentPlan.length > 0 ? (
+          {/* 1. سيكشن خطة العلاج المعتمدة */}
+          {treatmentPlan.length > 0 && (
             <div
               style={{
-                background: "var(--c-surface2)",
+                background: "#fcfcfc",
                 border: "1px solid var(--c-border)",
-                borderRadius: "var(--r-md)",
-                padding: "14px",
+                borderRadius: "14px",
+                padding: "16px",
               }}
             >
               <p
-                className="ds-label"
                 style={{
-                  marginBottom: 10,
+                  margin: "0 0 12px 0",
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
-                  fontWeight: "bold",
+                  gap: 6,
+                  fontWeight: "800",
+                  fontSize: "14px",
+                  color: "var(--c-ink)",
                 }}
               >
-                <Activity size={12} /> خطة العلاج والتوصيات
+                <Activity size={15} style={{ color: "var(--c-primary)" }} /> خطة
+                العلاج والتوصيات
               </p>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                }}
               >
                 {treatmentPlan.map((step, idx) => (
                   <div
-                    key={idx}
+                    key={step._id || idx}
                     style={{
-                      padding: "8px 12px",
+                      padding: "10px 12px",
                       background: "#fff",
-                      borderRadius: "8px",
-                      borderRight: `3px solid ${step.priority === 1 ? "var(--c-red)" : "var(--c-primary)"}`,
+                      borderRadius: "10px",
+                      border: "1px solid #f0f0f0",
+                      borderRight: `4px solid ${step.priority === 1 ? "var(--c-red)" : "#e67e22"}`,
                     }}
                   >
                     <h5
                       style={{
-                        fontSize: "12.5px",
+                        fontSize: "13.5px",
                         fontWeight: "700",
                         margin: 0,
                         color: "var(--c-ink)",
@@ -457,9 +499,10 @@ function ImageDetailModal({ log, onClose }) {
                     </h5>
                     <p
                       style={{
-                        fontSize: "11.5px",
+                        fontSize: "12.5px",
                         color: "var(--c-ink-60)",
-                        margin: "3px 0 0 0",
+                        margin: "4px 0 0 0",
+                        lineHeight: 1.5,
                       }}
                     >
                       {step.details}
@@ -468,61 +511,68 @@ function ImageDetailModal({ log, onClose }) {
                 ))}
               </div>
             </div>
-          ) : (
-            recommendations[0] && (
-              <div
-                style={{
-                  background: "var(--c-surface2)",
-                  border: "1px solid var(--c-border)",
-                  borderRadius: "var(--r-md)",
-                  padding: "14px",
-                  borderLeft: `3px solid ${statusColor}`,
-                }}
-              >
-                <p
-                  className="ds-label"
-                  style={{
-                    marginBottom: 7,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 5,
-                  }}
-                >
-                  <Activity size={11} /> AI Recommendation
-                </p>
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: "16px",
-                    fontSize: "12.5px",
-                    color: "var(--c-ink-60)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {recommendations.map((rec, i) => (
-                    <li key={i}>{rec}</li>
-                  ))}
-                </ul>
-              </div>
-            )
           )}
 
-          {/* مؤشرات تحليل الألوان المباشرة */}
+          {/* 2. سيكشن نصائح التصوير الكاميرا (captureTips) */}
+          {captureTips.length > 0 && (
+            <div
+              style={{
+                background: "#f4f9f4",
+                border: "1px solid #e1efe1",
+                borderRadius: "14px",
+                padding: "16px",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 10px 0",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontWeight: "800",
+                  fontSize: "14px",
+                  color: "#1e4620",
+                }}
+              >
+                <Camera size={15} /> نصائح لالتقاط صور أفضل مستقبلاً:
+              </p>
+              <ul
+                style={{
+                  margin: 0,
+                  paddingRight: "18px",
+                  fontSize: "13px",
+                  color: "#2d5a30",
+                  lineHeight: 1.7,
+                  listStyleType: "disc",
+                }}
+              >
+                {captureTips.map((tip, i) => (
+                  <li key={i} style={{ marginBottom: 4 }}>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* 3. مؤشرات تحليل الألوان المباشرة */}
           {hasColorData && (
             <div>
               <p
-                className="ds-label"
                 style={{
-                  marginBottom: 10,
+                  margin: "0 0 12px 0",
                   display: "flex",
                   alignItems: "center",
-                  gap: 5,
+                  gap: 6,
+                  fontWeight: "800",
+                  fontSize: "14px",
+                  color: "var(--c-ink)",
                 }}
               >
-                <BarChart2 size={11} /> Color Metrics Telemetry
+                <BarChart2 size={15} /> تحليل توزيع نسب الألوان في الورقة
               </p>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
               >
                 {[
                   {
@@ -552,7 +602,7 @@ function ImageDetailModal({ log, onClose }) {
                         display: "flex",
                         justifyContent: "space-between",
                         marginBottom: 5,
-                        fontSize: 11.5,
+                        fontSize: 12,
                         color: "var(--c-ink-60)",
                         fontWeight: 600,
                       }}
@@ -562,10 +612,21 @@ function ImageDetailModal({ log, onClose }) {
                         {value.toFixed(1)}%
                       </span>
                     </div>
-                    <div className="ds-color-bar">
+                    <div
+                      style={{
+                        height: 6,
+                        background: "#f0f0f0",
+                        borderRadius: 10,
+                        overflow: "hidden",
+                      }}
+                    >
                       <div
-                        className="ds-color-fill"
-                        style={{ width: `${value}%`, background: color }}
+                        style={{
+                          height: "100%",
+                          width: `${value}%`,
+                          background: color,
+                          borderRadius: 10,
+                        }}
                       />
                     </div>
                   </div>
@@ -573,10 +634,42 @@ function ImageDetailModal({ log, onClose }) {
               </div>
             </div>
           )}
+
+          {/* 4. ملحوظة الـ AI الذكية (Note) */}
+          {note && (
+            <div
+              style={{
+                marginTop: "10px",
+                background: "#f0f4f8",
+                border: "1px solid #d9e2ec",
+                borderRadius: "12px",
+                padding: "12px",
+                display: "flex",
+                gap: "10px",
+                alignItems: "flex-start",
+              }}
+            >
+              <Info
+                size={16}
+                style={{ color: "#486581", flexShrink: 0, marginTop: "2px" }}
+              />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12px",
+                  color: "#334e68",
+                  lineHeight: 1.6,
+                  fontWeight: "500",
+                }}
+              >
+                <strong>تنويه:</strong> {note}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>,
-    document.body, // 🚀 السحر هنا: بنطير المودال برا الصفحة كلها ونرميه تحت الـ body علطول
+    document.body,
   );
 }
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
