@@ -779,12 +779,18 @@ export default function Images() {
   const [dragOver, setDragOver] = useState(false);
   const [activeLog, setActiveLog] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // ✨ حلاّل المشاكل: هيدرجر الـ useFetch يعيد السحب فوراً بجانب الـ refetch
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
   const fileRef = useRef();
 
+  // 🔄 أضفنا الـ refreshTrigger هنا كمراقب
   const { data, loading, refetch } = useFetch(
     () => imagesAPI.getHistory({ sectorId: sectorId || undefined, limit: 200 }),
-    [sectorId],
+    [sectorId, refreshTrigger],
   );
+
   const allImages = data?.data || [];
   const totalPages = Math.ceil(allImages.length / ITEMS_PER_PAGE);
   const pageImages = allImages.slice(
@@ -821,12 +827,10 @@ export default function Images() {
       fd.append("image", file);
       fd.append("sectorId", sectorId);
 
-      // 🚀 البحث عن الجهاز المربوط بالقطاع المختار
       const matchedDevice = devices?.find(
         (dev) => (dev.sectorId?._id || dev.sectorId) === sectorId,
       );
 
-      // تعيين السيريال المناسب أو الاحتياطي
       const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
       fd.append("deviceSerial", currentSerial);
 
@@ -841,7 +845,6 @@ export default function Images() {
         response.status === 200 ||
         response.status === 201
       ) {
-        // استخراج بيانات تحليل الـ AI من السيرفر
         const aiResult = response.data?.data?.analysisResult;
 
         if (aiResult) {
@@ -851,17 +854,23 @@ export default function Images() {
             ? aiResult.confidence.toFixed(0)
             : 0;
 
-          // 🚨 الشرط الذكي: يشتغل فقط لو الحالة مش Healthy (أي إصابة أو شك)
           if (status !== "Healthy") {
             toast.error(
               `🚨 تنبيه: تم رصد مشكلة أو إصابة بالقطاع! التشخيص: ${disease} (${confidence}%)`,
-              { duration: 7000 }, // مدة 7 ثوانٍ عشان تلفت الانتباه ويقرأها المزارع
+              { duration: 7000 },
             );
+          } else {
+            toast.success("✅ تم الرفع والتحليل: النبات سليم وبصحة جيدة.");
           }
-          // 💡 ملحوظة: لو الحالة "Healthy" الكود هيتجاهل التوست تماماً ويمشي بهدوء
         }
 
-        // تحديث البيانات في الخلفية فوراً
+        // ✨ 1. نرجع للصفحة الأولى عشان الصورة الجديدة تظهر فوق
+        setCurrentPage(1);
+
+        // ✨ 2. نغير قيمة الـ Trigger لتحديث الـ useFetch فوراً بشكل إجباري
+        setRefreshTrigger((prev) => prev + 1);
+
+        // 3. نداء احتياطي للـ refetch لو الـ Hook بيدعمه بشكل صحيح
         if (refetch) await refetch();
       }
     } catch (error) {
@@ -871,6 +880,7 @@ export default function Images() {
       setUploading(false);
     }
   };
+
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -883,7 +893,8 @@ export default function Images() {
     try {
       await imagesAPI.delete(delId);
       toast.success("Image deleted");
-      refetch();
+      setRefreshTrigger((prev) => prev + 1); // تحديث القائمة بعد المسح أيضاً
+      if (refetch) refetch();
       setDelId(null);
       if (pageImages.length === 1 && currentPage > 1)
         setCurrentPage((p) => p - 1);
