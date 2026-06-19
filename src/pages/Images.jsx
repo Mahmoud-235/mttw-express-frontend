@@ -123,6 +123,25 @@ const DS = `
 /* Sector selector large */
 .ds-sector-select-lg{width:100%;padding:12px 40px 12px 16px;border-radius:var(--r-md);border:2px solid var(--c-border2);background:var(--c-surface);font-family:inherit;font-size:14px;font-weight:600;color:var(--c-ink);appearance:none;outline:none;cursor:pointer;transition:all var(--dur) var(--ease);}
 .ds-sector-select-lg:focus{border-color:var(--c-primary);box-shadow:0 0 0 3px rgba(45,106,42,.12);}
+/* أضف هذا الجزء في نهاية متغير DS داخل صفحة Images */
+
+div[class*="fixed"][class*="inset-0"][class*="z-50"] {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+div[class*="relative"][class*="w-full"] {
+  margin: auto !important;
+  position: relative !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
 `;
 
 let _injected = false;
