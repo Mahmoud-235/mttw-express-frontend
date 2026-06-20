@@ -61,19 +61,20 @@ export default function Login() {
       setLoading(false);
     }
   };
-
   // تسجيل الدخول عن طريق جوجل (توجيه كامل للمتصفح لمنع الـ CORS block)
   const handleGoogleLogin = (e) => {
     e.preventDefault();
     setGoogleLoading(true);
 
-    // ⚠️ استبدل هذا الرابط برابط الباكيند الفعلي المرفوع على Vercel
+    // الرابط الفعلي للباكيند المرفوع
     const BACKEND_VERCEL_URL = "https://ecosense-backend.vercel.app";
 
-    // توجيه المتصفح مباشرة لبوابة جوجل في الباكيند
-    window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google`;
-  };
+    // 1️⃣ جلب رابط الفرونت إند الحالي ديناميكياً (هيجيب localhost أو الدومين المرفوع تلقائياً)
+    const currentFrontendUrl = window.location.origin;
 
+    // 2️⃣ توجيه المتصفح مع تمرير الرابط في الـ query string
+    window.location.href = `${BACKEND_VERCEL_URL}/api/auth/google?redirect_to=${currentFrontendUrl}`;
+  };
   return (
     <div className="min-h-screen auth-bg flex items-center justify-center p-4">
       <div className="fixed top-0 left-0 w-96 h-96 bg-forest-300/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
