@@ -165,7 +165,7 @@ function getStatusClass(status) {
   return "unknown";
 }
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
-function ImageDetailModal({ log, onClose }) {
+export default function ImageDetailModal({ log, onClose }) {
   // منع السكرول في الخلفية تماماً طول ما المودال مفتوح
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -214,12 +214,8 @@ function ImageDetailModal({ log, onClose }) {
   const hasColorData =
     greenRatio > 0 || yellowRatio > 0 || brownRatio > 0 || damagedRatio > 0;
 
-  const recommendations = Array.isArray(res.recommendations)
-    ? res.recommendations
-    : [];
-  const treatmentPlan = Array.isArray(res.treatmentPlan)
-    ? res.treatmentPlan
-    : [];
+  const recommendations = Array.isArray(res.recommendations) ? res.recommendations : [];
+  const treatmentPlan = Array.isArray(res.treatmentPlan) ? res.treatmentPlan : [];
   const captureTips = Array.isArray(res.captureTips) ? res.captureTips : [];
   const note = res.note || "";
 
