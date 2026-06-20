@@ -672,7 +672,13 @@ export default function ImageDetailModal({ log, onClose }) {
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   const res = log.analysisResult || {};
   const sk = getStatusClass(res.status);
-  const conf = res.confidence ? Math.round(res.confidence) : 0;
+  
+  // الحسبة الذكية: لو القيمة عشرية (بين 0 و 1) نضربها في 100، غير كده ناخدها رقم صحيح
+  const rawConf = res.confidence || 0;
+  const conf =
+    rawConf <= 1 && rawConf > 0
+      ? Math.round(rawConf * 100)
+      : Math.round(rawConf);
 
   const confColor =
     conf >= 80
