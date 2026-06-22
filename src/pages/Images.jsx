@@ -669,13 +669,37 @@ export default function ImageDetailModal({ log, onClose }) {
   );
 }
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
+// 💡 دالة تحويل التاريخ للعربية (أضفناها هنا عشان تشتغل جوه الكارت بدون مشاكل)
+function timeAgo(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("ar-EG", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   const res = log.analysisResult || {};
+  
+  // دالة لتحديد الكلاس بناءً على الحالة
+  function getStatusClass(status) {
+    if (!status) return "unknown";
+    const s = status.toLowerCase();
+    if (s === "healthy") return "healthy";
+    if (s === "infected") return "infected";
+    if (s === "detected") return "detected";
+    return "unknown";
+  }
+
   const sk = getStatusClass(res.status);
   
-  // الحسبة الذكية: لو القيمة عشرية (بين 0 و 1) نضربها في 100، غير كده ناخدها رقم صحيح
-  const rawConf = res.confidence || 0;
+  // 🛡️ تأمين قوية: تحويل الـ confidence لرقم عشري حقيقي حتى لو جاي String من الـ Backend
+  const rawConf = res.confidence ? parseFloat(res.confidence) : 0;
+  
+  // الحسبة الذكية: لو رقم عشري اضرب في 100، لو رقم صحيح (زي 95) خده زي ما هو
   const conf =
     rawConf <= 1 && rawConf > 0
       ? Math.round(rawConf * 100)
