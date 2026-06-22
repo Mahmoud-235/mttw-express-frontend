@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Upload,
   ImageIcon,
@@ -147,7 +147,6 @@ div[class*="relative"][class*="w-full"] {
 }
 `;
 
-
 let _injected = false;
 function useDS() {
   if (!_injected && typeof document !== "undefined") {
@@ -167,7 +166,7 @@ function getStatusClass(status) {
 }
 
 /* ─── Image Detail Modal ─────────────────────────────────────────────────── */
-export default function ImageDetailModal({ log, onClose }) {
+function ImageDetailModal({ log, onClose }) {
   // منع السكرول في الخلفية تماماً طول ما المودال مفتوح
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -183,26 +182,22 @@ export default function ImageDetailModal({ log, onClose }) {
   const status = res.status;
 
   // تحديد الكلاس والألوان بناءً على الـ status بما فيها الحالة الجديدة Detected
-  let sk = "unknown";
   let statusColor = "var(--c-amber)";
   let statusBg = "var(--c-amber-l)";
   let statusBorder = "#f0d080";
   let StatusIcon = Cpu;
 
   if (status?.toLowerCase() === "healthy") {
-    sk = "healthy";
     statusColor = "var(--c-primary)";
     statusBg = "var(--c-primary-l)";
     statusBorder = "var(--c-border2)";
     StatusIcon = CheckCircle;
   } else if (status?.toLowerCase() === "infected") {
-    sk = "infected";
     statusColor = "var(--c-red)";
     statusBg = "var(--c-red-l)";
     statusBorder = "var(--c-red-b)";
     StatusIcon = AlertCircle;
-  } else if (status?.toLowerCase() === "detected" || status === "Detected") {
-    sk = "detected";
+  } else if (status?.toLowerCase() === "detected") {
     statusColor = "#e67e22"; // برتقالي مميز للـ Detected
     statusBg = "#fdf2e9";
     statusBorder = "#fadbd8";
@@ -216,8 +211,9 @@ export default function ImageDetailModal({ log, onClose }) {
   const hasColorData =
     greenRatio > 0 || yellowRatio > 0 || brownRatio > 0 || damagedRatio > 0;
 
-  const recommendations = Array.isArray(res.recommendations) ? res.recommendations : [];
-  const treatmentPlan = Array.isArray(res.treatmentPlan) ? res.treatmentPlan : [];
+  const treatmentPlan = Array.isArray(res.treatmentPlan)
+    ? res.treatmentPlan
+    : [];
   const captureTips = Array.isArray(res.captureTips) ? res.captureTips : [];
   const note = res.note || "";
 
@@ -227,7 +223,7 @@ export default function ImageDetailModal({ log, onClose }) {
       ? Math.round(rawConf * 100)
       : Math.round(rawConf);
 
-  function timeAgo(dateString) {
+  function formatDate(dateString) {
     if (!dateString) return "";
     const date = new Date(dateString);
     return date.toLocaleDateString("ar-EG", {
@@ -383,7 +379,7 @@ export default function ImageDetailModal({ log, onClose }) {
                 }}
               >
                 <Calendar size={12} /> تم الالتقاط:{" "}
-                {log.createdAt ? timeAgo(log.createdAt) : "غير مدرج"}
+                {log.createdAt ? formatDate(log.createdAt) : "غير مدرج"}
               </p>
             </div>
             <button
@@ -670,25 +666,13 @@ export default function ImageDetailModal({ log, onClose }) {
     document.body,
   );
 }
+
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
-
-
-function timeAgo(dateString) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("ar-EG", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   // 1. الوصول الآمن للبيانات لتجنب الـ undefined errors
   const res = log?.analysisResult || {};
-  console.log("محمود شوف الداتا هنا:", res);
-  
-  function getStatusClass(status) {
+
+  function getCardStatusClass(status) {
     if (!status) return "unknown";
     const s = status.toLowerCase();
     if (s === "healthy") return "healthy";
@@ -697,8 +681,8 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
     return "unknown";
   }
 
-  const sk = getStatusClass(res.status);
-  
+  const sk = getCardStatusClass(res.status);
+
   // 🛡️ الحل الجذري: سحب الـ confidence الحقيقي والـ Fallback لنسبة التلف
   const backendConf = res.confidence ? parseFloat(res.confidence) : 0;
   const damagedProp = res.ratios?.damaged || 0;
@@ -731,7 +715,10 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   return (
     <div className={`ds-card-img ${sk}`} onClick={() => onOpenDetail(log)}>
       <div className="ds-card-img-thumb">
-        <img src={log?.imageUrl || "placeholder-image-url.png"} alt="plant scan" />
+        <img
+          src={log?.imageUrl || "placeholder-image-url.png"}
+          alt="plant scan"
+        />
         <div style={{ position: "absolute", top: 10, left: 10, zIndex: 2 }}>
           <span className={`ds-status ${sk}`}>
             {sk === "healthy" ? (
@@ -832,7 +819,9 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
           <span
             style={{ fontSize: 11, color: "var(--c-ink-40)", fontWeight: 500 }}
           >
-            {log?.captureReason === "Automatic Camera" ? "📷 Auto" : "📱 Manual"}
+            {log?.captureReason === "Automatic Camera"
+              ? "📷 Auto"
+              : "📱 Manual"}
           </span>
           <span style={{ fontSize: 11, color: "var(--c-ink-40)" }}>
             {log?.createdAt ? timeAgo(log.createdAt) : ""}
@@ -843,7 +832,6 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   );
 }
 
-export default DiagnosisCard;
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
 export default function Images() {
   useDS();
@@ -852,7 +840,7 @@ export default function Images() {
   const sectors = sData?.data || [];
   const { data: dData } = useFetch(devicesAPI.getAll);
   const devices = dData?.data || [];
-  
+
   const [sectorId, setSectorId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [delId, setDelId] = useState(null);
@@ -871,40 +859,34 @@ export default function Images() {
 
   const allImages = data?.data || [];
 
-  // ⚡ التعديل الجديد هنا: حساب العدادات بدقة وحماية الأداء باستخدام useMemo وتوحيد حالة الأحرف
- const { healthy, infected } = useMemo(() => {
-  let hCount = 0;
-  let iCount = 0;
+  // ⚡ حساب العدادات بدقة وحماية الأداء باستخدام useMemo وتوحيد حالة الأحرف
+  const { healthy, infected } = useMemo(() => {
+    let hCount = 0;
+    let iCount = 0;
 
-  // 🔍 سطر فحص: للتأكد إن المصفوفة بتلف وفيها داتا فعلاً
-  console.log("📊 إجمالي الصور المستلمة في الكود:", allImages.length);
-  if (allImages.length > 0) {
-    console.log("👀 عينة من أول صورة لمعاينة الأوبجكت:", allImages[0]);
-  }
+    allImages.forEach((img) => {
+      // محاولة قراءة الستيتس من كذا مكان متوقع في الـ Backend
+      const status = (
+        img.analysisResult?.status ||
+        img.status ||
+        img.result?.status ||
+        ""
+      ).toLowerCase();
 
-  allImages.forEach((img) => {
-    // محاولة قراءة الستيتس من كذا مكان متوقع في الـ Backend
-    const status = (
-      img.analysisResult?.status || 
-      img.status || 
-      img.result?.status || 
-      ""
-    ).toLowerCase();
-    
-    if (status === "healthy" || status === "سليم") {
-      hCount++;
-    } else if (
-      status === "infected" || 
-      status === "unhealthy" || 
-      status === "detected" || 
-      status === "مصاب"
-    ) {
-      iCount++;
-    }
-  });
+      if (status === "healthy" || status === "سليم") {
+        hCount++;
+      } else if (
+        status === "infected" ||
+        status === "unhealthy" ||
+        status === "detected" ||
+        status === "مصاب"
+      ) {
+        iCount++;
+      }
+    });
 
-  return { healthy: hCount, infected: iCount };
-}, [allImages]);
+    return { healthy: hCount, infected: iCount };
+  }, [allImages]);
 
   const totalPages = Math.ceil(allImages.length / ITEMS_PER_PAGE);
   const pageImages = allImages.slice(
@@ -939,7 +921,9 @@ export default function Images() {
       const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
       fd.append("deviceSerial", currentSerial);
 
-      console.log(`🚀 Sending Image for Sector: [${sectorId}] with Serial: [${currentSerial}]`);
+      console.log(
+        `🚀 Sending Image for Sector: [${sectorId}] with Serial: [${currentSerial}]`,
+      );
 
       const response = await imagesAPI.upload(fd);
 
@@ -953,7 +937,9 @@ export default function Images() {
         if (aiResult) {
           const status = aiResult.status;
           const disease = aiResult.diseaseName || "تحليل غير متاح";
-          const confidence = aiResult.confidence ? aiResult.confidence.toFixed(0) : 0;
+          const confidence = aiResult.confidence
+            ? aiResult.confidence.toFixed(0)
+            : 0;
 
           if (status?.toLowerCase() !== "healthy") {
             toast.error(
@@ -1003,26 +989,54 @@ export default function Images() {
   };
 
   const getPageNumbers = () => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (totalPages <= 7)
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
     const pages = [];
     if (currentPage <= 4) pages.push(1, 2, 3, 4, 5, "…", totalPages);
     else if (currentPage >= totalPages - 3) {
-      pages.push(1, "…", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      pages.push(
+        1,
+        "…",
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      );
     } else {
-      pages.push(1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages);
+      pages.push(
+        1,
+        "…",
+        currentPage - 1,
+        currentPage,
+        currentPage + 1,
+        "…",
+        totalPages,
+      );
     }
     return pages;
   };
 
   const selectedSector = sectors.find((s) => s._id === sectorId);
-return (
+
+  return (
     <div className="ds-page ds-fade" style={{ padding: "24px 20px 60px" }}>
       {/* Hero */}
       <div className="ds-hero">
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
           <div>
             <h2 className="ds-hero-title">Plant Scan & Diagnosis</h2>
-            <p className="ds-hero-sub">AI-powered disease detection from plant images</p>
+            <p className="ds-hero-sub">
+              AI-powered disease detection from plant images
+            </p>
           </div>
           <div className="ds-select-wrap">
             <select
@@ -1033,9 +1047,13 @@ return (
                 setCurrentPage(1);
               }}
             >
-              <option value="" style={{ color: "#000" }}>— Select sector —</option>
+              <option value="" style={{ color: "#000" }}>
+                — Select sector —
+              </option>
               {sectors.map((s) => (
-                <option key={s._id} value={s._id} style={{ color: "#000" }}>{s.name}</option>
+                <option key={s._id} value={s._id} style={{ color: "#000" }}>
+                  {s.name}
+                </option>
               ))}
             </select>
             <ChevronDown size={13} style={{ color: "rgba(255,255,255,.75)" }} />
@@ -1043,16 +1061,54 @@ return (
         </div>
 
         {selectedSector && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,.12)", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 14,
+              borderTop: "1px solid rgba(255,255,255,.12)",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                background: "rgba(255,255,255,.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Leaf size={13} color="#fff" />
             </div>
             <div>
-              <p style={{ color: "#fff", fontSize: 13, fontWeight: 700, margin: 0 }}>{selectedSector.name}</p>
-              <p style={{ color: "rgba(255,255,255,.55)", fontSize: 11, margin: 0 }}>
+              <p
+                style={{
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  margin: 0,
+                }}
+              >
+                {selectedSector.name}
+              </p>
+              <p
+                style={{
+                  color: "rgba(255,255,255,.55)",
+                  fontSize: 11,
+                  margin: 0,
+                }}
+              >
                 {selectedSector.cropType}
-                {selectedSector.location ? ` · 📍 ${selectedSector.location}` : ""}
-                {selectedSector.assignedWorker ? ` · 👤 ${selectedSector.assignedWorker.firstName} ${selectedSector.assignedWorker.lastName}` : ""}
+                {selectedSector.location
+                  ? ` · 📍 ${selectedSector.location}`
+                  : ""}
+                {selectedSector.assignedWorker
+                  ? ` · 👤 ${selectedSector.assignedWorker.firstName} ${selectedSector.assignedWorker.lastName}`
+                  : ""}
               </p>
             </div>
           </div>
@@ -1060,34 +1116,141 @@ return (
       </div>
 
       {/* 🟢 الـ Stats معدلة بدون شرط الحجب لتظهر دائماً ومحسنة الخلفيات والألوان لتناسب EcoSense */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
-        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <div className="ds-stat-icon" style={{ background: "rgba(34,197,94,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3,1fr)",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <div
+          className="ds-stat"
+          style={{
+            background: "#fff",
+            padding: "14px",
+            borderRadius: "12px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            className="ds-stat-icon"
+            style={{
+              background: "rgba(34,197,94,.1)",
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 6,
+            }}
+          >
             <Leaf size={18} style={{ color: "var(--c-primary)" }} />
           </div>
           <div>
-            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{allImages.length}</p>
-            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Total Scans</p>
-          </div>
-        </div>
-        
-        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <div className="ds-stat-icon" style={{ background: "rgba(239,68,68,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-            <AlertCircle size={18} style={{ color: "var(--c-red)" }} />
-          </div>
-          <div>
-            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0, color: infected > 0 ? "var(--c-red)" : "var(--c-ink)" }}>{infected}</p>
-            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Infected</p>
+            <p
+              className="ds-stat-val"
+              style={{ fontSize: 18, fontWeight: 800, margin: 0 }}
+            >
+              {allImages.length}
+            </p>
+            <p
+              className="ds-stat-label"
+              style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}
+            >
+              Total Scans
+            </p>
           </div>
         </div>
 
-        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <div className="ds-stat-icon" style={{ background: "rgba(34,197,94,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+        <div
+          className="ds-stat"
+          style={{
+            background: "#fff",
+            padding: "14px",
+            borderRadius: "12px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            className="ds-stat-icon"
+            style={{
+              background: "rgba(239,68,68,.1)",
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 6,
+            }}
+          >
+            <AlertCircle size={18} style={{ color: "var(--c-red)" }} />
+          </div>
+          <div>
+            <p
+              className="ds-stat-val"
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                margin: 0,
+                color: infected > 0 ? "var(--c-red)" : "var(--c-ink)",
+              }}
+            >
+              {infected}
+            </p>
+            <p
+              className="ds-stat-label"
+              style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}
+            >
+              Infected
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="ds-stat"
+          style={{
+            background: "#fff",
+            padding: "14px",
+            borderRadius: "12px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            className="ds-stat-icon"
+            style={{
+              background: "rgba(34,197,94,.1)",
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 6,
+            }}
+          >
             <CheckCircle size={18} style={{ color: "var(--c-primary)" }} />
           </div>
           <div>
-            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--c-primary)" }}>{healthy}</p>
-            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Healthy</p>
+            <p
+              className="ds-stat-val"
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                margin: 0,
+                color: "var(--c-primary)",
+              }}
+            >
+              {healthy}
+            </p>
+            <p
+              className="ds-stat-label"
+              style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}
+            >
+              Healthy
+            </p>
           </div>
         </div>
       </div>
@@ -1095,13 +1258,41 @@ return (
       {/* Warning Section */}
       {!sectorId && (
         <div className="ds-sector-required" style={{ marginBottom: 16 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(180,83,9,.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: "rgba(180,83,9,.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
             <AlertTriangle size={17} style={{ color: "var(--c-warn)" }} />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--c-warn)", margin: "0 0 4px" }}>Select a sector to upload</p>
-            <p style={{ fontSize: 12, color: "#92400e", margin: "0 0 12px", lineHeight: 1.5 }}>
-              You must select a sector before uploading a plant image. The image will be linked to this sector for AI diagnosis.
+            <p
+              style={{
+                fontSize: 13,
+                fontWeight: 800,
+                color: "var(--c-warn)",
+                margin: "0 0 4px",
+              }}
+            >
+              Select a sector to upload
+            </p>
+            <p
+              style={{
+                fontSize: 12,
+                color: "#92400e",
+                margin: "0 0 12px",
+                lineHeight: 1.5,
+              }}
+            >
+              You must select a sector before uploading a plant image. The image
+              will be linked to this sector for AI diagnosis.
             </p>
             <div style={{ position: "relative" }}>
               <select
@@ -1114,10 +1305,22 @@ return (
               >
                 <option value="">— Choose a sector —</option>
                 {sectors.map((s) => (
-                  <option key={s._id} value={s._id}>{s.name} — {s.cropType}</option>
+                  <option key={s._id} value={s._id}>
+                    {s.name} — {s.cropType}
+                  </option>
                 ))}
               </select>
-              <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--c-warn)" }} />
+              <ChevronDown
+                size={14}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                  color: "var(--c-warn)",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -1146,37 +1349,98 @@ return (
           type="file"
           accept="image/*"
           style={{ display: "none" }}
-          onClick={(e) => { e.target.value = null; }}
-          onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0]); }}
+          onClick={(e) => {
+            e.target.value = null;
+          }}
+          onChange={(e) => {
+            if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+          }}
         />
 
         {uploading ? (
           <>
-            <div className="ds-upload-icon" style={{ background: "var(--c-primary)", borderColor: "var(--c-primary)" }}>
-              <Loader size={22} style={{ color: "#fff", animation: "spin .8s linear infinite" }} />
+            <div
+              className="ds-upload-icon"
+              style={{
+                background: "var(--c-primary)",
+                borderColor: "var(--c-primary)",
+              }}
+            >
+              <Loader
+                size={22}
+                style={{ color: "#fff", animation: "spin .8s linear infinite" }}
+              />
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "var(--c-primary)", marginBottom: 4 }}>Uploading & analyzing with AI…</p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>This may take a few seconds</p>
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "var(--c-primary)",
+                  marginBottom: 4,
+                }}
+              >
+                Uploading & analyzing with AI…
+              </p>
+              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
+                This may take a few seconds
+              </p>
             </div>
           </>
         ) : !sectorId ? (
           <>
-            <div className="ds-upload-icon" style={{ background: "var(--c-warn-l)", borderColor: "var(--c-warn-b)" }}>
+            <div
+              className="ds-upload-icon"
+              style={{
+                background: "var(--c-warn-l)",
+                borderColor: "var(--c-warn-b)",
+              }}
+            >
               <AlertTriangle size={24} style={{ color: "var(--c-warn)" }} />
             </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: "var(--c-warn)", marginBottom: 5 }}>Select a sector first</p>
-              <p style={{ fontSize: 12, color: "#92400e" }}>Choose a sector from above to enable image upload</p>
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "var(--c-warn)",
+                  marginBottom: 5,
+                }}
+              >
+                Select a sector first
+              </p>
+              <p style={{ fontSize: 12, color: "#92400e" }}>
+                Choose a sector from above to enable image upload
+              </p>
             </div>
           </>
         ) : (
           <>
-            <div className="ds-upload-icon"><Camera size={24} style={{ color: "var(--c-primary)" }} /></div>
+            <div className="ds-upload-icon">
+              <Camera size={24} style={{ color: "var(--c-primary)" }} />
+            </div>
             <div style={{ textAlign: "center" }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: "var(--c-ink)", marginBottom: 5 }}>Drop image here or click to upload</p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>PNG, JPG, WEBP — plant photos for disease detection</p>
-              <p style={{ fontSize: 11, color: "var(--c-primary)", fontWeight: 700, marginTop: 5 }}>
+              <p
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "var(--c-ink)",
+                  marginBottom: 5,
+                }}
+              >
+                Drop image here or click to upload
+              </p>
+              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
+                PNG, JPG, WEBP — plant photos for disease detection
+              </p>
+              <p
+                style={{
+                  fontSize: 11,
+                  color: "var(--c-primary)",
+                  fontWeight: 700,
+                  marginTop: 5,
+                }}
+              >
                 📍 Will be linked to: <strong>{selectedSector?.name}</strong>
               </p>
             </div>
@@ -1189,45 +1453,127 @@ return (
 
       {/* Grid Display */}
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-          {[...Array(8)].map((_, i) => <div key={i} className="ds-shimmer" style={{ height: 260 }} />)}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2,1fr)",
+            gap: 14,
+          }}
+        >
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="ds-shimmer" style={{ height: 260 }} />
+          ))}
         </div>
       ) : allImages.length === 0 ? (
         <div className="ds-empty">
-          <ImageIcon size={36} style={{ color: "var(--c-ink-20)", margin: "0 auto 14px" }} />
-          <p style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: "var(--c-ink)", marginBottom: 6 }}>No scans yet</p>
+          <ImageIcon
+            size={36}
+            style={{ color: "var(--c-ink-20)", margin: "0 auto 14px" }}
+          />
+          <p
+            style={{
+              fontFamily: "'Fraunces',serif",
+              fontSize: 18,
+              fontWeight: 700,
+              color: "var(--c-ink)",
+              marginBottom: 6,
+            }}
+          >
+            No scans yet
+          </p>
           <p style={{ fontSize: 13, color: "var(--c-ink-40)" }}>
-            {sectorId ? "Upload your first plant image to get an AI disease diagnosis." : "Select a sector then upload a plant image."}
+            {sectorId
+              ? "Upload your first plant image to get an AI disease diagnosis."
+              : "Select a sector then upload a plant image."}
           </p>
         </div>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 700, color: "var(--c-ink)", letterSpacing: "-.2px" }}>Recent Scans</span>
-            <span style={{ fontSize: 12, color: "var(--c-ink-40)", fontWeight: 600 }}>
-              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, allImages.length)} of {allImages.length}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Fraunces',serif",
+                fontSize: 17,
+                fontWeight: 700,
+                color: "var(--c-ink)",
+                letterSpacing: "-.2px",
+              }}
+            >
+              Recent Scans
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                color: "var(--c-ink-40)",
+                fontWeight: 600,
+              }}
+            >
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+              {Math.min(currentPage * ITEMS_PER_PAGE, allImages.length)} of{" "}
+              {allImages.length}
             </span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2,1fr)",
+              gap: 14,
+            }}
+          >
             {pageImages.map((img) => (
-              <DiagnosisCard key={img._id} log={img} onDelete={setDelId} onOpenDetail={setActiveLog} />
+              <DiagnosisCard
+                key={img._id}
+                log={img}
+                onDelete={setDelId}
+                onOpenDetail={setActiveLog}
+              />
             ))}
           </div>
-          
+
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="ds-pagination">
-              <button className="ds-page-btn" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
+              <button
+                className="ds-page-btn"
+                disabled={currentPage === 1}
+                onClick={() => handlePageChange(currentPage - 1)}
+              >
                 <ChevronLeft size={15} />
               </button>
               {getPageNumbers().map((p, i) =>
                 p === "…" ? (
-                  <span key={`e-${i}`} style={{ padding: "0 4px", color: "var(--c-ink-40)", fontSize: 13 }}>…</span>
+                  <span
+                    key={`e-${i}`}
+                    style={{
+                      padding: "0 4px",
+                      color: "var(--c-ink-40)",
+                      fontSize: 13,
+                    }}
+                  >
+                    …
+                  </span>
                 ) : (
-                  <button key={p} className={`ds-page-btn${currentPage === p ? " active" : ""}`} onClick={() => handlePageChange(p)}>{p}</button>
-                )
+                  <button
+                    key={p}
+                    className={`ds-page-btn${currentPage === p ? " active" : ""}`}
+                    onClick={() => handlePageChange(p)}
+                  >
+                    {p}
+                  </button>
+                ),
               )}
-              <button className="ds-page-btn" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)}>
+              <button
+                className="ds-page-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(currentPage + 1)}
+              >
                 <ChevronRight size={15} />
               </button>
             </div>
@@ -1235,7 +1581,9 @@ return (
         </>
       )}
 
-      {activeLog && <ImageDetailModal log={activeLog} onClose={() => setActiveLog(null)} />}
+      {activeLog && (
+        <ImageDetailModal log={activeLog} onClose={() => setActiveLog(null)} />
+      )}
       <ConfirmDialog
         open={!!delId}
         onClose={() => setDelId(null)}
