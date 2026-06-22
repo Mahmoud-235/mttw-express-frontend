@@ -669,6 +669,7 @@ export default function ImageDetailModal({ log, onClose }) {
   );
 }
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
+/* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   const res = log.analysisResult || {};
   const sk = getStatusClass(res.status);
