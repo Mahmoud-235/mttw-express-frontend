@@ -684,6 +684,7 @@ function timeAgo(dateString) {
 
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   const res = log.analysisResult || {};
+  console.log("محمود شوف الداتا هنا:", res);
   
   function getStatusClass(status) {
     if (!status) return "unknown";
