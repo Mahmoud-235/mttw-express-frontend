@@ -670,8 +670,9 @@ export default function ImageDetailModal({ log, onClose }) {
     document.body,
   );
 }
-
 /* ─── Diagnosis Card ─────────────────────────────────────────────────────── */
+
+
 function timeAgo(dateString) {
   if (!dateString) return "";
   const date = new Date(dateString);
@@ -683,7 +684,8 @@ function timeAgo(dateString) {
 }
 
 function DiagnosisCard({ log, onDelete, onOpenDetail }) {
-  const res = log.analysisResult || {};
+  // 1. الوصول الآمن للبيانات لتجنب الـ undefined errors
+  const res = log?.analysisResult || {};
   console.log("محمود شوف الداتا هنا:", res);
   
   function getStatusClass(status) {
@@ -707,11 +709,13 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
     rawConf = damagedProp;
   }
 
+  // حساب النسبة المئوية النهائية وضمان التقريب الصحيح
   const conf =
     rawConf <= 1 && rawConf > 0
       ? Math.round(rawConf * 100)
       : Math.round(rawConf);
 
+  // تحديد ألوان الـ Progress Bar ونسبة التأكد
   const confColor =
     conf >= 80
       ? "var(--c-primary)"
@@ -719,6 +723,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
         ? "var(--c-amber)"
         : "var(--c-red)";
 
+  // معالجة التوصيات (سواء مصفوفة أو نص عادي مبعوت من الـ backend)
   const briefRec = Array.isArray(res.recommendations)
     ? res.recommendations[0]
     : res.recommendation || "";
@@ -726,7 +731,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
   return (
     <div className={`ds-card-img ${sk}`} onClick={() => onOpenDetail(log)}>
       <div className="ds-card-img-thumb">
-        <img src={log.imageUrl} alt="plant scan" />
+        <img src={log?.imageUrl || "placeholder-image-url.png"} alt="plant scan" />
         <div style={{ position: "absolute", top: 10, left: 10, zIndex: 2 }}>
           <span className={`ds-status ${sk}`}>
             {sk === "healthy" ? (
@@ -742,13 +747,14 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
         <button
           className="ds-del-btn"
           onClick={(e) => {
-            e.stopPropagation();
-            onDelete(log._id);
+            e.stopPropagation(); // منع انتشار الحدث لعدم فتح الـ Detail Popup عند الحذف
+            onDelete(log?._id);
           }}
         >
           <Trash2 size={13} />
         </button>
       </div>
+
       <div className="ds-card-img-body">
         <div
           style={{
@@ -772,7 +778,7 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
               flex: 1,
             }}
           >
-            {res.diseaseName || "Healthy"}
+            {res.diseaseName || (sk === "healthy" ? "Healthy" : "Unknown")}
           </p>
           {conf > 0 && (
             <span
@@ -826,16 +832,18 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
           <span
             style={{ fontSize: 11, color: "var(--c-ink-40)", fontWeight: 500 }}
           >
-            {log.captureReason === "Automatic Camera" ? "📷 Auto" : "📱 Manual"}
+            {log?.captureReason === "Automatic Camera" ? "📷 Auto" : "📱 Manual"}
           </span>
           <span style={{ fontSize: 11, color: "var(--c-ink-40)" }}>
-            {log.createdAt ? timeAgo(log.createdAt) : ""}
+            {log?.createdAt ? timeAgo(log.createdAt) : ""}
           </span>
         </div>
       </div>
     </div>
   );
 }
+
+export default DiagnosisCard;
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
 export default function Images() {
   useDS();
