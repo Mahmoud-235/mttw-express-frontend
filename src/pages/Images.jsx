@@ -852,6 +852,7 @@ export default function Images() {
   const sectors = sData?.data || [];
   const { data: dData } = useFetch(devicesAPI.getAll);
   const devices = dData?.data || [];
+  
   const [sectorId, setSectorId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [delId, setDelId] = useState(null);
@@ -859,19 +860,32 @@ export default function Images() {
   const [dragOver, setDragOver] = useState(false);
   const [activeLog, setActiveLog] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  // ✨ حلاّل المشاكل: هيدرجر الـ useFetch يعيد السحب فوراً بجانب الـ refetch
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fileRef = useRef();
 
-  // 🔄 أضفنا الـ refreshTrigger هنا كمراقب
   const { data, loading, refetch } = useFetch(
     () => imagesAPI.getHistory({ sectorId: sectorId || undefined, limit: 200 }),
     [sectorId, refreshTrigger],
   );
 
   const allImages = data?.data || [];
+
+  // ⚡ التعديل الجديد هنا: حساب العدادات بدقة وحماية الأداء باستخدام useMemo وتوحيد حالة الأحرف
+  const { healthy, infected } = useMemo(() => {
+    let hCount = 0;
+    let iCount = 0;
+    allImages.forEach((img) => {
+      const status = img.analysisResult?.status?.toLowerCase() || "";
+      if (status === "healthy") {
+        hCount++;
+      } else if (status === "infected" || status === "unhealthy" || status === "detected") {
+        iCount++;
+      }
+    });
+    return { healthy: hCount, infected: iCount };
+  }, [allImages]);
+
   const totalPages = Math.ceil(allImages.length / ITEMS_PER_PAGE);
   const pageImages = allImages.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -882,15 +896,6 @@ export default function Images() {
     setCurrentPage(p);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  const infected = allImages.filter(
-    (i) =>
-      i.analysisResult?.status === "Infected" ||
-      i.analysisResult?.status === "Unhealthy",
-  ).length;
-  const healthy = allImages.filter(
-    (i) => i.analysisResult?.status === "Healthy",
-  ).length;
 
   /* ── Upload ── */
   const handleUpload = async (file) => {
@@ -914,9 +919,7 @@ export default function Images() {
       const currentSerial = matchedDevice?.deviceSerial || "ESP32-GENERIC-UNIT";
       fd.append("deviceSerial", currentSerial);
 
-      console.log(
-        `🚀 Sending Image for Sector: [${sectorId}] with Serial: [${currentSerial}]`,
-      );
+      console.log(`🚀 Sending Image for Sector: [${sectorId}] with Serial: [${currentSerial}]`);
 
       const response = await imagesAPI.upload(fd);
 
@@ -930,11 +933,9 @@ export default function Images() {
         if (aiResult) {
           const status = aiResult.status;
           const disease = aiResult.diseaseName || "تحليل غير متاح";
-          const confidence = aiResult.confidence
-            ? aiResult.confidence.toFixed(0)
-            : 0;
+          const confidence = aiResult.confidence ? aiResult.confidence.toFixed(0) : 0;
 
-          if (status !== "Healthy") {
+          if (status?.toLowerCase() !== "healthy") {
             toast.error(
               `🚨 تنبيه: تم رصد مشكلة أو إصابة بالقطاع! التشخيص: ${disease} (${confidence}%)`,
               { duration: 7000 },
@@ -944,13 +945,8 @@ export default function Images() {
           }
         }
 
-        // ✨ 1. نرجع للصفحة الأولى عشان الصورة الجديدة تظهر فوق
         setCurrentPage(1);
-
-        // ✨ 2. نغير قيمة الـ Trigger لتحديث الـ useFetch فوراً بشكل إجباري
         setRefreshTrigger((prev) => prev + 1);
-
-        // 3. نداء احتياطي للـ refetch لو الـ Hook بيدعمه بشكل صحيح
         if (refetch) await refetch();
       }
     } catch (error) {
@@ -973,11 +969,12 @@ export default function Images() {
     try {
       await imagesAPI.delete(delId);
       toast.success("Image deleted");
-      setRefreshTrigger((prev) => prev + 1); // تحديث القائمة بعد المسح أيضاً
+      setRefreshTrigger((prev) => prev + 1);
       if (refetch) refetch();
       setDelId(null);
-      if (pageImages.length === 1 && currentPage > 1)
+      if (pageImages.length === 1 && currentPage > 1) {
         setCurrentPage((p) => p - 1);
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed");
     } finally {
@@ -986,56 +983,28 @@ export default function Images() {
   };
 
   const getPageNumbers = () => {
-    if (totalPages <= 7)
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
     const pages = [];
     if (currentPage <= 4) pages.push(1, 2, 3, 4, 5, "…", totalPages);
-    else if (currentPage >= totalPages - 3)
-      pages.push(
-        1,
-        "…",
-        totalPages - 4,
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
-      );
-    else
-      pages.push(
-        1,
-        "…",
-        currentPage - 1,
-        currentPage,
-        currentPage + 1,
-        "…",
-        totalPages,
-      );
+    else if (currentPage >= totalPages - 3) {
+      pages.push(1, "…", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "…", currentPage - 1, currentPage, currentPage + 1, "…", totalPages);
+    }
     return pages;
   };
 
-  // Selected sector object
   const selectedSector = sectors.find((s) => s._id === sectorId);
 
   return (
     <div className="ds-page ds-fade" style={{ padding: "24px 20px 60px" }}>
       {/* Hero */}
       <div className="ds-hero">
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 16,
-          }}
-        >
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
           <div>
             <h2 className="ds-hero-title">Plant Scan & Diagnosis</h2>
-            <p className="ds-hero-sub">
-              AI-powered disease detection from plant images
-            </p>
+            <p className="ds-hero-sub">AI-powered disease detection from plant images</p>
           </div>
-          {/* Sector selector in hero */}
           <div className="ds-select-wrap">
             <select
               className="ds-select ds-select-dark"
@@ -1045,69 +1014,26 @@ export default function Images() {
                 setCurrentPage(1);
               }}
             >
-              <option value="" style={{ color: "#000" }}>
-                — Select sector —
-              </option>
+              <option value="" style={{ color: "#000" }}>— Select sector —</option>
               {sectors.map((s) => (
-                <option key={s._id} value={s._id} style={{ color: "#000" }}>
-                  {s.name}
-                </option>
+                <option key={s._id} value={s._id} style={{ color: "#000" }}>{s.name}</option>
               ))}
             </select>
             <ChevronDown size={13} style={{ color: "rgba(255,255,255,.75)" }} />
           </div>
         </div>
 
-        {/* Selected sector info strip */}
         {selectedSector && (
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 14,
-              borderTop: "1px solid rgba(255,255,255,.12)",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                background: "rgba(255,255,255,.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,.12)", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Leaf size={13} color="#fff" />
             </div>
             <div>
-              <p
-                style={{
-                  color: "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  margin: 0,
-                }}
-              >
-                {selectedSector.name}
-              </p>
-              <p
-                style={{
-                  color: "rgba(255,255,255,.55)",
-                  fontSize: 11,
-                  margin: 0,
-                }}
-              >
+              <p style={{ color: "#fff", fontSize: 13, fontWeight: 700, margin: 0 }}>{selectedSector.name}</p>
+              <p style={{ color: "rgba(255,255,255,.55)", fontSize: 11, margin: 0 }}>
                 {selectedSector.cropType}
-                {selectedSector.location
-                  ? ` · 📍 ${selectedSector.location}`
-                  : ""}
-                {selectedSector.assignedWorker
-                  ? ` · 👤 ${selectedSector.assignedWorker.firstName} ${selectedSector.assignedWorker.lastName}`
-                  : ""}
+                {selectedSector.location ? ` · 📍 ${selectedSector.location}` : ""}
+                {selectedSector.assignedWorker ? ` · 👤 ${selectedSector.assignedWorker.firstName} ${selectedSector.assignedWorker.lastName}` : ""}
               </p>
             </div>
           </div>
@@ -1116,102 +1042,42 @@ export default function Images() {
 
       {/* Stats */}
       {allImages.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
           <div className="ds-stat">
-            <div
-              className="ds-stat-icon"
-              style={{ background: "var(--c-primary-l)" }}
-            >
-              <Leaf size={18} style={{ color: "var(--c-primary)" }} />
-            </div>
+            <div className="ds-stat-icon" style={{ background: "var(--c-primary-l)" }}><Leaf size={18} style={{ color: "var(--c-primary)" }} /></div>
             <div>
               <p className="ds-stat-val">{allImages.length}</p>
               <p className="ds-stat-label">Total Scans</p>
             </div>
           </div>
           <div className="ds-stat">
-            <div
-              className="ds-stat-icon"
-              style={{ background: "var(--c-red-l)" }}
-            >
-              <AlertCircle size={18} style={{ color: "var(--c-red)" }} />
-            </div>
+            <div className="ds-stat-icon" style={{ background: "var(--c-red-l)" }}><AlertCircle size={18} style={{ color: "var(--c-red)" }} /></div>
             <div>
-              <p
-                className="ds-stat-val"
-                style={{
-                  color: infected > 0 ? "var(--c-red)" : "var(--c-ink)",
-                }}
-              >
-                {infected}
-              </p>
+              <p className="ds-stat-val" style={{ color: infected > 0 ? "var(--c-red)" : "var(--c-ink)" }}>{infected}</p>
               <p className="ds-stat-label">Infected</p>
             </div>
           </div>
           <div className="ds-stat">
-            <div
-              className="ds-stat-icon"
-              style={{ background: "var(--c-primary-l)" }}
-            >
-              <CheckCircle size={18} style={{ color: "var(--c-primary)" }} />
-            </div>
+            <div className="ds-stat-icon" style={{ background: "var(--c-primary-l)" }}><CheckCircle size={18} style={{ color: "var(--c-primary)" }} /></div>
             <div>
-              <p className="ds-stat-val" style={{ color: "var(--c-primary)" }}>
-                {healthy}
-              </p>
+              <p className="ds-stat-val" style={{ color: "var(--c-primary)" }}>{healthy}</p>
               <p className="ds-stat-label">Healthy</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Sector required warning ── */}
+      {/* Warning Section */}
       {!sectorId && (
         <div className="ds-sector-required" style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: "rgba(180,83,9,.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(180,83,9,.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <AlertTriangle size={17} style={{ color: "var(--c-warn)" }} />
           </div>
           <div style={{ flex: 1 }}>
-            <p
-              style={{
-                fontSize: 13,
-                fontWeight: 800,
-                color: "var(--c-warn)",
-                margin: "0 0 4px",
-              }}
-            >
-              Select a sector to upload
+            <p style={{ fontSize: 13, fontWeight: 800, color: "var(--c-warn)", margin: "0 0 4px" }}>Select a sector to upload</p>
+            <p style={{ fontSize: 12, color: "#92400e", margin: "0 0 12px", lineHeight: 1.5 }}>
+              You must select a sector before uploading a plant image. The image will be linked to this sector for AI diagnosis.
             </p>
-            <p
-              style={{
-                fontSize: 12,
-                color: "#92400e",
-                margin: "0 0 12px",
-                lineHeight: 1.5,
-              }}
-            >
-              You must select a sector before uploading a plant image. The image
-              will be linked to this sector for AI diagnosis.
-            </p>
-            {/* Large sector selector in warning */}
             <div style={{ position: "relative" }}>
               <select
                 className="ds-sector-select-lg"
@@ -1223,28 +1089,16 @@ export default function Images() {
               >
                 <option value="">— Choose a sector —</option>
                 {sectors.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name} — {s.cropType}
-                  </option>
+                  <option key={s._id} value={s._id}>{s.name} — {s.cropType}</option>
                 ))}
               </select>
-              <ChevronDown
-                size={14}
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: "var(--c-warn)",
-                }}
-              />
+              <ChevronDown size={14} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--c-warn)" }} />
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Upload Zone ── */}
+      {/* Upload Zone */}
       <div
         className={`ds-upload${dragOver ? " drag" : ""}${!sectorId ? " blocked" : ""}`}
         style={{ marginBottom: 24 }}
@@ -1267,232 +1121,88 @@ export default function Images() {
           type="file"
           accept="image/*"
           style={{ display: "none" }}
-          onClick={(e) => {
-            e.target.value = null;
-          }}
-          onChange={(e) => {
-            if (e.target.files?.[0]) handleUpload(e.target.files[0]);
-          }}
+          onClick={(e) => { e.target.value = null; }}
+          onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0]); }}
         />
 
         {uploading ? (
           <>
-            <div
-              className="ds-upload-icon"
-              style={{
-                background: "var(--c-primary)",
-                borderColor: "var(--c-primary)",
-              }}
-            >
-              <Loader
-                size={22}
-                style={{ color: "#fff", animation: "spin .8s linear infinite" }}
-              />
+            <div className="ds-upload-icon" style={{ background: "var(--c-primary)", borderColor: "var(--c-primary)" }}>
+              <Loader size={22} style={{ color: "#fff", animation: "spin .8s linear infinite" }} />
             </div>
             <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "var(--c-primary)",
-                  marginBottom: 4,
-                }}
-              >
-                Uploading & analyzing with AI…
-              </p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
-                This may take a few seconds
-              </p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "var(--c-primary)", marginBottom: 4 }}>Uploading & analyzing with AI…</p>
+              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>This may take a few seconds</p>
             </div>
           </>
         ) : !sectorId ? (
           <>
-            <div
-              className="ds-upload-icon"
-              style={{
-                background: "var(--c-warn-l)",
-                borderColor: "var(--c-warn-b)",
-              }}
-            >
+            <div className="ds-upload-icon" style={{ background: "var(--c-warn-l)", borderColor: "var(--c-warn-b)" }}>
               <AlertTriangle size={24} style={{ color: "var(--c-warn)" }} />
             </div>
             <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "var(--c-warn)",
-                  marginBottom: 5,
-                }}
-              >
-                Select a sector first
-              </p>
-              <p style={{ fontSize: 12, color: "#92400e" }}>
-                Choose a sector from above to enable image upload
-              </p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: "var(--c-warn)", marginBottom: 5 }}>Select a sector first</p>
+              <p style={{ fontSize: 12, color: "#92400e" }}>Choose a sector from above to enable image upload</p>
             </div>
           </>
         ) : (
           <>
-            <div className="ds-upload-icon">
-              <Camera size={24} style={{ color: "var(--c-primary)" }} />
-            </div>
+            <div className="ds-upload-icon"><Camera size={24} style={{ color: "var(--c-primary)" }} /></div>
             <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "var(--c-ink)",
-                  marginBottom: 5,
-                }}
-              >
-                Drop image here or click to upload
-              </p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
-                PNG, JPG, WEBP — plant photos for disease detection
-              </p>
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "var(--c-primary)",
-                  fontWeight: 700,
-                  marginTop: 5,
-                }}
-              >
+              <p style={{ fontSize: 14, fontWeight: 800, color: "var(--c-ink)", marginBottom: 5 }}>Drop image here or click to upload</p>
+              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>PNG, JPG, WEBP — plant photos for disease detection</p>
+              <p style={{ fontSize: 11, color: "var(--c-primary)", fontWeight: 700, marginTop: 5 }}>
                 📍 Will be linked to: <strong>{selectedSector?.name}</strong>
               </p>
             </div>
-            <button
-              className="ds-btn ds-btn-primary"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <button className="ds-btn ds-btn-primary" type="button">
               <Upload size={14} /> Choose Image
             </button>
           </>
         )}
       </div>
 
-      {/* Grid */}
+      {/* Grid Display */}
       {loading ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)",
-            gap: 14,
-          }}
-        >
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="ds-shimmer" style={{ height: 260 }} />
-          ))}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+          {[...Array(8)].map((_, i) => <div key={i} className="ds-shimmer" style={{ height: 260 }} />)}
         </div>
       ) : allImages.length === 0 ? (
         <div className="ds-empty">
-          <ImageIcon
-            size={36}
-            style={{ color: "var(--c-ink-20)", margin: "0 auto 14px" }}
-          />
-          <p
-            style={{
-              fontFamily: "'Fraunces',serif",
-              fontSize: 18,
-              fontWeight: 700,
-              color: "var(--c-ink)",
-              marginBottom: 6,
-            }}
-          >
-            No scans yet
-          </p>
+          <ImageIcon size={36} style={{ color: "var(--c-ink-20)", margin: "0 auto 14px" }} />
+          <p style={{ fontFamily: "'Fraunces',serif", fontSize: 18, fontWeight: 700, color: "var(--c-ink)", marginBottom: 6 }}>No scans yet</p>
           <p style={{ fontSize: 13, color: "var(--c-ink-40)" }}>
-            {sectorId
-              ? "Upload your first plant image to get an AI disease diagnosis."
-              : "Select a sector then upload a plant image."}
+            {sectorId ? "Upload your first plant image to get an AI disease diagnosis." : "Select a sector then upload a plant image."}
           </p>
         </div>
       ) : (
         <>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 14,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'Fraunces',serif",
-                fontSize: 17,
-                fontWeight: 700,
-                color: "var(--c-ink)",
-                letterSpacing: "-.2px",
-              }}
-            >
-              Recent Scans
-            </span>
-            <span
-              style={{
-                fontSize: 12,
-                color: "var(--c-ink-40)",
-                fontWeight: 600,
-              }}
-            >
-              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-              {Math.min(currentPage * ITEMS_PER_PAGE, allImages.length)} of{" "}
-              {allImages.length}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <span style={{ fontFamily: "'Fraunces',serif", fontSize: 17, fontWeight: 700, color: "var(--c-ink)", letterSpacing: "-.2px" }}>Recent Scans</span>
+            <span style={{ fontSize: 12, color: "var(--c-ink-40)", fontWeight: 600 }}>
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, allImages.length)} of {allImages.length}
             </span>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2,1fr)",
-              gap: 14,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
             {pageImages.map((img) => (
-              <DiagnosisCard
-                key={img._id}
-                log={img}
-                onDelete={setDelId}
-                onOpenDetail={setActiveLog}
-              />
+              <DiagnosisCard key={img._id} log={img} onDelete={setDelId} onOpenDetail={setActiveLog} />
             ))}
           </div>
+          
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="ds-pagination">
-              <button
-                className="ds-page-btn"
-                disabled={currentPage === 1}
-                onClick={() => handlePageChange(currentPage - 1)}
-              >
+              <button className="ds-page-btn" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
                 <ChevronLeft size={15} />
               </button>
               {getPageNumbers().map((p, i) =>
                 p === "…" ? (
-                  <span
-                    key={`e-${i}`}
-                    style={{
-                      padding: "0 4px",
-                      color: "var(--c-ink-40)",
-                      fontSize: 13,
-                    }}
-                  >
-                    …
-                  </span>
+                  <span key={`e-${i}`} style={{ padding: "0 4px", color: "var(--c-ink-40)", fontSize: 13 }}>…</span>
                 ) : (
-                  <button
-                    key={p}
-                    className={`ds-page-btn${currentPage === p ? " active" : ""}`}
-                    onClick={() => handlePageChange(p)}
-                  >
-                    {p}
-                  </button>
-                ),
+                  <button key={p} className={`ds-page-btn${currentPage === p ? " active" : ""}`} onClick={() => handlePageChange(p)}>{p}</button>
+                )
               )}
-              <button
-                className="ds-page-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => handlePageChange(currentPage + 1)}
-              >
+              <button className="ds-page-btn" disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)}>
                 <ChevronRight size={15} />
               </button>
             </div>
@@ -1500,9 +1210,7 @@ export default function Images() {
         </>
       )}
 
-      {activeLog && (
-        <ImageDetailModal log={activeLog} onClose={() => setActiveLog(null)} />
-      )}
+      {activeLog && <ImageDetailModal log={activeLog} onClose={() => setActiveLog(null)} />}
       <ConfirmDialog
         open={!!delId}
         onClose={() => setDelId(null)}
