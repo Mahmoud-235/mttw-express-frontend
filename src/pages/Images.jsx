@@ -872,19 +872,39 @@ export default function Images() {
   const allImages = data?.data || [];
 
   // ⚡ التعديل الجديد هنا: حساب العدادات بدقة وحماية الأداء باستخدام useMemo وتوحيد حالة الأحرف
-  const { healthy, infected } = useMemo(() => {
-    let hCount = 0;
-    let iCount = 0;
-    allImages.forEach((img) => {
-      const status = img.analysisResult?.status?.toLowerCase() || "";
-      if (status === "healthy") {
-        hCount++;
-      } else if (status === "infected" || status === "unhealthy" || status === "detected") {
-        iCount++;
-      }
-    });
-    return { healthy: hCount, infected: iCount };
-  }, [allImages]);
+ const { healthy, infected } = useMemo(() => {
+  let hCount = 0;
+  let iCount = 0;
+
+  // 🔍 سطر فحص: للتأكد إن المصفوفة بتلف وفيها داتا فعلاً
+  console.log("📊 إجمالي الصور المستلمة في الكود:", allImages.length);
+  if (allImages.length > 0) {
+    console.log("👀 عينة من أول صورة لمعاينة الأوبجكت:", allImages[0]);
+  }
+
+  allImages.forEach((img) => {
+    // محاولة قراءة الستيتس من كذا مكان متوقع في الـ Backend
+    const status = (
+      img.analysisResult?.status || 
+      img.status || 
+      img.result?.status || 
+      ""
+    ).toLowerCase();
+    
+    if (status === "healthy" || status === "سليم") {
+      hCount++;
+    } else if (
+      status === "infected" || 
+      status === "unhealthy" || 
+      status === "detected" || 
+      status === "مصاب"
+    ) {
+      iCount++;
+    }
+  });
+
+  return { healthy: hCount, infected: iCount };
+}, [allImages]);
 
   const totalPages = Math.ceil(allImages.length / ITEMS_PER_PAGE);
   const pageImages = allImages.slice(
@@ -995,8 +1015,7 @@ export default function Images() {
   };
 
   const selectedSector = sectors.find((s) => s._id === sectorId);
-
-  return (
+return (
     <div className="ds-page ds-fade" style={{ padding: "24px 20px 60px" }}>
       {/* Hero */}
       <div className="ds-hero">
@@ -1040,32 +1059,38 @@ export default function Images() {
         )}
       </div>
 
-      {/* Stats */}
-      {allImages.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
-          <div className="ds-stat">
-            <div className="ds-stat-icon" style={{ background: "var(--c-primary-l)" }}><Leaf size={18} style={{ color: "var(--c-primary)" }} /></div>
-            <div>
-              <p className="ds-stat-val">{allImages.length}</p>
-              <p className="ds-stat-label">Total Scans</p>
-            </div>
+      {/* 🟢 الـ Stats معدلة بدون شرط الحجب لتظهر دائماً ومحسنة الخلفيات والألوان لتناسب EcoSense */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="ds-stat-icon" style={{ background: "rgba(34,197,94,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+            <Leaf size={18} style={{ color: "var(--c-primary)" }} />
           </div>
-          <div className="ds-stat">
-            <div className="ds-stat-icon" style={{ background: "var(--c-red-l)" }}><AlertCircle size={18} style={{ color: "var(--c-red)" }} /></div>
-            <div>
-              <p className="ds-stat-val" style={{ color: infected > 0 ? "var(--c-red)" : "var(--c-ink)" }}>{infected}</p>
-              <p className="ds-stat-label">Infected</p>
-            </div>
-          </div>
-          <div className="ds-stat">
-            <div className="ds-stat-icon" style={{ background: "var(--c-primary-l)" }}><CheckCircle size={18} style={{ color: "var(--c-primary)" }} /></div>
-            <div>
-              <p className="ds-stat-val" style={{ color: "var(--c-primary)" }}>{healthy}</p>
-              <p className="ds-stat-label">Healthy</p>
-            </div>
+          <div>
+            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{allImages.length}</p>
+            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Total Scans</p>
           </div>
         </div>
-      )}
+        
+        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="ds-stat-icon" style={{ background: "rgba(239,68,68,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+            <AlertCircle size={18} style={{ color: "var(--c-red)" }} />
+          </div>
+          <div>
+            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0, color: infected > 0 ? "var(--c-red)" : "var(--c-ink)" }}>{infected}</p>
+            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Infected</p>
+          </div>
+        </div>
+
+        <div className="ds-stat" style={{ background: "#fff", padding: "14px", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+          <div className="ds-stat-icon" style={{ background: "rgba(34,197,94,.1)", width: 34, height: 34, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+            <CheckCircle size={18} style={{ color: "var(--c-primary)" }} />
+          </div>
+          <div>
+            <p className="ds-stat-val" style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--c-primary)" }}>{healthy}</p>
+            <p className="ds-stat-label" style={{ fontSize: 11, color: "var(--c-ink-40)", margin: 0 }}>Healthy</p>
+          </div>
+        </div>
+      </div>
 
       {/* Warning Section */}
       {!sectorId && (
