@@ -1013,13 +1013,6 @@ export default function Images() {
   };
 
   // فتح اختيار صورة من المعرض
-  const openGallery = () => {
-    if (!sectorId) {
-      toast.error("الرجاء اختيار القطاع أولاً.");
-      return;
-    }
-    fileRef.current?.click();
-  };
 
   const openCamera = async () => {
     if (!sectorId) {
