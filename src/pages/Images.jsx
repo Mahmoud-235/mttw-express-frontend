@@ -1640,20 +1640,25 @@ export default function Images() {
                 position: "relative",
                 width: "100%",
                 maxWidth: 600,
+                maxHeight: "70vh",
                 background: "#000",
                 borderRadius: 20,
                 overflow: "hidden",
-                aspectRatio: "4 / 3",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 style={{
                   width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
+                  height: "auto",
+                  maxHeight: "70vh",
+                  objectFit: "contain",
                   display: "block",
                 }}
               />
