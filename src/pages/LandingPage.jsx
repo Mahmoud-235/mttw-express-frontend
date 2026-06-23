@@ -980,13 +980,12 @@ const LandingPage = () => {
       <section
         style={{
           padding: "40px 20px 60px",
-          "@media (min-width: 768px)": {
-            padding: "0 60px 100px",
-          }
-        }}
           marginTop: -50,
           position: "relative",
           zIndex: 20,
+          "@media (min-width: 768px)": {
+            padding: "0 60px 100px",
+          }
         }}
       >
         <motion.div
@@ -1287,12 +1286,12 @@ const LandingPage = () => {
       {/* ── FEATURES ── */}
       <section
         id="features"
+        style={{
           padding: "60px 20px",
           "@media (min-width: 768px)": {
             padding: "100px 60px",
           }
         }}
-        style={{
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <motion.div
@@ -1906,13 +1905,12 @@ const LandingPage = () => {
         id="footer"
         style={{
           background: "#020b08",
+          color: "#fff",
+          borderTop: "1px solid rgba(82,212,74,0.1)",
           padding: "40px 20px 20px",
           "@media (min-width: 768px)": {
             padding: "60px 60px 30px",
           }
-        }}
-          color: "#fff",
-          borderTop: "1px solid rgba(82,212,74,0.1)",
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
