@@ -724,8 +724,15 @@ function DiagnosisCard({ log, onDelete, onOpenDetail }) {
     <div className={`ds-card-img ${sk}`} onClick={() => onOpenDetail(log)}>
       <div className="ds-card-img-thumb">
         <img
-          src={log?.imageUrl || "placeholder-image-url.png"}
-          alt="plant scan"
+          src={log.imageUrl || log.url} // أو حسب الـ prop اللي عندك
+          alt="Plant scan"
+          style={{
+            width: "100%",
+            height: "200px", // أو الارتفاع الثابت اللي إنت محدده للكارت
+            objectFit: "cover", // 🚀 هذا السطر يمنع التمطيط تماماً ويقص الأطراف الزائدة مع الحفاظ على النسبة الطبيعية
+            objectPosition: "center", // يضمن إن نص الصورة هو اللي يظهر دايماً
+            borderRadius: "8px", // لو تحب تضيف حواف دائرية تليق بالتصميم
+          }}
         />
         <div style={{ position: "absolute", top: 10, left: 10, zIndex: 2 }}>
           <span className={`ds-status ${sk}`}>
