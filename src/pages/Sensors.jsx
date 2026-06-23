@@ -1010,7 +1010,7 @@ function LivePanel({ sectorId, onRegisterRefresh, onLatestChange }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
           gap: 14,
         }}
       >
@@ -1051,7 +1051,7 @@ function LivePanel({ sectorId, onRegisterRefresh, onLatestChange }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: 14,
         }}
       >

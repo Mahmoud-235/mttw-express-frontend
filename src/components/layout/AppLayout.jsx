@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -16,13 +17,20 @@ const pageTitles = {
 export function AppLayout() {
   const { pathname } = useLocation();
   const title = pageTitles[pathname] || "EcoSense";
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-screen bg-forest-50 flex">
-      <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
-        <Topbar title={title} />
-        <main className="flex-1 p-6 animate-fade-in">
+    <div className="min-h-screen bg-forest-50 flex flex-col md:flex-row">
+      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <div className="flex-1 flex flex-col min-h-screen">
+        <Topbar
+          title={title}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
+        <main className="flex-1 p-4 md:p-6 animate-fade-in overflow-auto">
           <Outlet />
         </main>
       </div>

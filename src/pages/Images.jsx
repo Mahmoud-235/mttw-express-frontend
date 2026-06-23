@@ -1456,7 +1456,7 @@ export default function Images() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)",
+            gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
             gap: 14,
           }}
         >
@@ -1523,7 +1523,7 @@ export default function Images() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2,1fr)",
+              gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
               gap: 14,
             }}
           >

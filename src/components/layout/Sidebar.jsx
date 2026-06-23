@@ -11,6 +11,7 @@ import {
   LogOut,
   Leaf,
   Wifi,
+  X,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -33,7 +34,7 @@ const workerLinks = [
   { to: "/notifications", icon: Bell, label: "Alerts" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuth();
   const { connected } = useSocket();
   const navigate = useNavigate();
@@ -45,19 +46,24 @@ export function Sidebar() {
     navigate("/login", { replace: true });
   };
 
-  return (
-    <aside className="sidebar-bg w-64 min-h-screen flex flex-col fixed left-0 top-0 z-30">
+  const navLinkClass = ({ isActive }) =>
+    isActive
+      ? "nav-link-active"
+      : "nav-link text-forest-200 hover:text-white hover:bg-white/10";
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
       <div className="px-5 py-6 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-forest-400 rounded-xl flex items-center justify-center shadow-forest-sm">
+          <div className="w-9 h-9 bg-forest-400 rounded-xl flex items-center justify-center shadow-forest-sm flex-shrink-0">
             <Leaf size={18} className="text-white" />
           </div>
-          <div>
-            <span className="text-white font-bold text-lg tracking-tight">
+          <div className="min-w-0">
+            <span className="text-white font-bold text-lg tracking-tight block truncate">
               EcoSense
             </span>
-            <p className="text-forest-300 text-xs font-medium">
+            <p className="text-forest-300 text-xs font-medium truncate">
               Smart Farm Monitor
             </p>
           </div>
@@ -70,14 +76,11 @@ export function Sidebar() {
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) =>
-              isActive
-                ? "nav-link-active"
-                : "nav-link text-forest-200 hover:text-white hover:bg-white/10"
-            }
+            className={navLinkClass}
+            onClick={onClose}
           >
-            <Icon size={17} />
-            <span>{label}</span>
+            <Icon size={17} className="flex-shrink-0" />
+            <span className="truncate">{label}</span>
           </NavLink>
         ))}
       </nav>
@@ -85,22 +88,22 @@ export function Sidebar() {
       {/* User */}
       <div className="px-3 py-4 border-t border-white/10 space-y-2">
         {/* Socket status */}
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="flex items-center gap-2 px-3 py-2 text-xs">
           <div
-            className={`w-2 h-2 rounded-full ${connected ? "bg-forest-400 animate-pulse-slow" : "bg-sage-500"}`}
+            className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-forest-400 animate-pulse-slow" : "bg-sage-500"}`}
           />
-          <span className="text-xs text-forest-300">
+          <span className="text-forest-300 truncate">
             {connected ? "Live connected" : "Offline"}
           </span>
           <Wifi
             size={12}
             className={
-              connected ? "text-forest-400 ml-auto" : "text-sage-500 ml-auto"
+              connected ? "text-forest-400 ml-auto flex-shrink-0" : "text-sage-500 ml-auto flex-shrink-0"
             }
           />
         </div>
 
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/5 min-w-0">
           <div className="w-8 h-8 bg-forest-500 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold">
               {user?.firstName?.[0]}
@@ -111,7 +114,7 @@ export function Sidebar() {
             <p className="text-white text-xs font-semibold truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-forest-300 text-xs capitalize">{user?.role}</p>
+            <p className="text-forest-300 text-xs capitalize truncate">{user?.role}</p>
           </div>
         </div>
 
@@ -120,10 +123,40 @@ export function Sidebar() {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
                      text-forest-300 hover:text-white hover:bg-white/10 transition-all"
         >
-          <LogOut size={15} />
-          <span>Sign out</span>
+          <LogOut size={15} className="flex-shrink-0" />
+          <span className="truncate">Sign out</span>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`sidebar-bg w-64 min-h-screen flex flex-col fixed left-0 top-0 z-30 md:relative md:z-auto transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
+        {/* Mobile close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-6 p-1 rounded-lg hover:bg-white/10 md:hidden z-40"
+          aria-label="Close sidebar"
+        >
+          <X size={20} className="text-white" />
+        </button>
+
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

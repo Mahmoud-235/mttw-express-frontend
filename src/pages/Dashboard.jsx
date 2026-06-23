@@ -710,7 +710,7 @@ function OwnerDashboard({ d }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: 14,
         }}
       >
@@ -818,7 +818,7 @@ function OwnerDashboard({ d }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
                 gap: 12,
               }}
             >
@@ -897,11 +897,7 @@ function OwnerDashboard({ d }) {
           <span className="ds-section-title">Quick Actions</span>
         </div>
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 12,
-          }}
+          style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}
         >
           {[
             {
@@ -1111,7 +1107,7 @@ function WorkerDashboard({ d }) {
       {/* Sensor stats */}
       {!noReadings && (
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
         >
           <StatCard
             icon={TrendingUp}
@@ -1337,7 +1333,7 @@ export default function Dashboard() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             gap: 14,
             marginBottom: 20,
           }}

@@ -6,24 +6,24 @@ import {
   Settings,
   LogOut,
   Shield,
+  Menu,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../context/AuthContext";
 
-export function Topbar({ title }) {
+export function Topbar({ title, sidebarOpen, onToggleSidebar }) {
   const { liveAlerts, clearAlert } = useSocket();
-  const { user, logout } = useAuth(); // 👈 سحبنا دالة الـ logout من الـ Context لو موجودة عندك
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [showAlerts, setShowAlerts] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false); // 👈 State للتحكم في قائمة البروفايل
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const userMenuRef = useRef(null); // 👈 مرجع لقفل القائمة عند الضغط خارجها
+  const userMenuRef = useRef(null);
   const unread = liveAlerts.length;
   const userAvatar = user?.avatarUrl || user?.avatar || null;
 
-  // 🛡️ تأثير غلق قائمة البروفايل تلقائياً عند الضغط في أي مكان خارجي
   useEffect(() => {
     function handleClickOutside(event) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -39,18 +39,28 @@ export function Topbar({ title }) {
     if (logout) {
       await logout();
     }
-    navigate("/login"); // التوجيه لصفحة تسجيل الدخول
+    navigate("/login");
   };
 
   return (
     <header
       className="h-16 bg-white/80 backdrop-blur-sm border-b border-forest-100
-                        flex items-center justify-between px-6 sticky top-0 z-20"
+                        flex items-center justify-between px-4 md:px-6 sticky top-0 z-20"
     >
-      <h1 className="text-lg font-semibold text-sage-900">{title}</h1>
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <button
+          onClick={onToggleSidebar}
+          className="md:hidden p-2 rounded-xl hover:bg-forest-50 text-sage-500
+                     hover:text-forest-700 transition-colors flex-shrink-0"
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-lg font-semibold text-sage-900 truncate">{title}</h1>
+      </div>
 
-      <div className="flex items-center gap-3">
-        {/* 🔔 قسم الإشعارات (Bell) */}
+      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+        {/* Bell Notifications */}
         <div className="relative">
           <button
             onClick={() => {
@@ -74,7 +84,7 @@ export function Topbar({ title }) {
           {showAlerts && (
             <div
               className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl
-                            shadow-card-hover border border-forest-100 overflow-hidden z-50 animate-slide-up"
+                            shadow-card-hover border border-forest-100 overflow-hidden z-50 animate-slide-up max-w-[calc(100vw-1rem)]"
             >
               <div className="px-4 py-3 border-b border-forest-100 flex items-center justify-between">
                 <span className="text-sm font-semibold text-sage-800">
@@ -112,7 +122,7 @@ export function Topbar({ title }) {
                       </div>
                       <button
                         onClick={() => clearAlert(a.id)}
-                        className="text-sage-300 hover:text-sage-600 text-xs"
+                        className="text-sage-300 hover:text-sage-600 text-xs flex-shrink-0"
                       >
                         ✕
                       </button>
@@ -124,21 +134,20 @@ export function Topbar({ title }) {
           )}
         </div>
 
-        {/* 👤 كارت المستخدم والقائمة المنسدلة الاحترافية */}
+        {/* User Menu */}
         <div className="relative" ref={userMenuRef}>
           <div
             onClick={() => {
               setShowUserMenu(!showUserMenu);
               setShowAlerts(false);
             }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border 
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border
               ${
                 showUserMenu
                   ? "bg-forest-50 border-forest-200 shadow-xs"
                   : "hover:bg-forest-50 border-transparent hover:border-forest-200"
               }`}
           >
-            {/* الصورة الشخصية أو البديل */}
             <div className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden bg-forest-600 shadow-xs flex-shrink-0">
               {userAvatar ? (
                 <img
@@ -154,22 +163,18 @@ export function Topbar({ title }) {
               )}
             </div>
 
-            {/* اسم المستخدم */}
-            <span className="text-sm font-semibold text-sage-700 hidden sm:block select-none">
+            <span className="text-sm font-semibold text-sage-700 hidden sm:block select-none truncate">
               {user?.firstName || "Mahmoud"}
             </span>
 
-            {/* سهم متحرك بسلاسة عند الفتح والإغلاق */}
             <ChevronDown
               size={13}
-              className={`text-sage-400 transition-transform duration-200 ${showUserMenu ? "rotate-180 text-forest-600" : ""}`}
+              className={`text-sage-400 transition-transform duration-200 flex-shrink-0 ${showUserMenu ? "rotate-180 text-forest-600" : ""}`}
             />
           </div>
 
-          {/* 🌟 نافذة المنيو المنسدلة (Dropdown Menu) */}
           {showUserMenu && (
-            <div className="absolute left-0 mt-2 w-52 bg-white rounded-2xl shadow-card-hover border border-forest-100 overflow-hidden z-50 animate-slide-up">
-              {/* رأس القائمة: معلومات المستخدم الحالي */}
+            <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-card-hover border border-forest-100 overflow-hidden z-50 animate-slide-up">
               <div className="px-4 py-3 bg-gradient-to-br from-forest-50/40 to-transparent border-b border-forest-50">
                 <p className="text-xs text-sage-400 font-medium">
                   Logged in as
@@ -184,9 +189,7 @@ export function Topbar({ title }) {
                 )}
               </div>
 
-              {/* الأزرار التفاعلية المتاحة فعلياً */}
               <div className="p-1.5">
-                {/* زر تسجيل الخروج مباشرة */}
                 <button
                   onClick={handleLogoutClick}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors text-left font-semibold"
