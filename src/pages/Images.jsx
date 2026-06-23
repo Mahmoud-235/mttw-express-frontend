@@ -1563,6 +1563,7 @@ export default function Images() {
               </div>
 
               {/* ✨ تم منع الـ Bubbling بـ e.stopPropagation() لضمان عمل كل زرار بمفرده */}
+              {/* الأزرار السفلية لمنع الـ Bubbling وضمان عمل كل خيار بشكل منفصل */}
               <div
                 className="ds-source-row"
                 onClick={(e) => e.stopPropagation()}
@@ -1572,17 +1573,18 @@ export default function Images() {
                   className="ds-source-btn gallery"
                   onClick={(e) => {
                     e.stopPropagation(); // منع استدعاء onClick الخاص بالحاوية الأكبر
-                    openGallery();
+                    openGallery(); // يفتح معرض الصور الخاص بالجهاز
                   }}
                 >
                   <ImageIcon size={15} /> اختر من المعرض
                 </button>
+
                 <button
                   type="button"
                   className="ds-source-btn camera"
                   onClick={(e) => {
-                    e.stopPropagation(); // منع تداخل كود فتح المعرض
-                    openNativeCamera();
+                    e.stopPropagation(); // يمنع تداخل الكود مع الحاوية الخلفية
+                    openCamera(); // 🚀 سيفتح الكاميرا المباشرة فوراً داخل التطبيق مع زر الرجوع/الإلغاء
                   }}
                 >
                   <Camera size={15} /> صور بالكاميرا
