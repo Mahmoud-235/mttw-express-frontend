@@ -1026,11 +1026,12 @@ export default function Images() {
       return;
     }
     try {
+      // طلب أبعاد مرنة ونسبية متوافقة مع الموبايل (عشان تمنع المط في البث المباشر كمان)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         },
         audio: false,
       });
@@ -1050,14 +1051,30 @@ export default function Images() {
   const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     try {
-      const ctx = canvasRef.current.getContext("2d");
-      canvasRef.current.width = videoRef.current.videoWidth;
-      canvasRef.current.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0);
-      canvasRef.current.toBlob(
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      // ✨ الحل السحري: أخذ الأبعاد الحقيقية للبث (videoWidth و videoHeight) وليس أبعاد الـ HTML
+      const realWidth = video.videoWidth;
+      const realHeight = video.videoHeight;
+
+      if (realWidth === 0 || realHeight === 0) {
+        toast.error("Camera is still loading, try again.");
+        return;
+      }
+
+      // تعيين أبعاد الكانفاس لتطابق تماماً الأبعاد الحقيقية للكاميرا (منع التمطيط واللخبطة)
+      canvas.width = realWidth;
+      canvas.height = realHeight;
+
+      // رسم الصورة بدقة 1:1 بدون أي تشويه
+      ctx.drawImage(video, 0, 0, realWidth, realHeight);
+
+      canvas.toBlob(
         (blob) => {
           if (blob) {
-            const file = new File([blob], "camera-photo.jpg", {
+            const file = new File([blob], `camera-${Date.now()}.jpg`, {
               type: "image/jpeg",
             });
             closeCamera();
@@ -1065,7 +1082,7 @@ export default function Images() {
           }
         },
         "image/jpeg",
-        0.95,
+        0.95, // جودة عالية جداً للتحليل بالذكاء الاصطناعي
       );
     } catch (err) {
       toast.error("Failed to capture photo");
