@@ -278,20 +278,39 @@ function ImageDetailModal({ log, onClose }) {
         }}
         className="my-custom-forced-modal"
       >
-        <style>{`
-          .my-custom-forced-modal { display: grid !important; grid-template-columns: 1fr !important; }
-          @media(min-width: 768px) {
-            .my-custom-forced-modal { grid-template-columns: 1fr 1.3fr !important; }
-          }
-        `}</style>
+        <style>
+          {`
+                .my-custom-forced-modal {
+                  display: grid !important;
+                  grid-template-columns: 1fr !important;
+                  grid-template-rows: 38vh 1fr !important;
+                }
+                .my-custom-forced-modal .modal-img-side {
+                  height: 38vh !important;
+                  max-height: 38vh !important;
+                }
+                @media(min-width: 768px) {
+                  .my-custom-forced-modal {
+                    grid-template-columns: 1fr 1.3fr !important;
+                    grid-template-rows: 1fr !important;
+                  }
+                  .my-custom-forced-modal .modal-img-side {
+                    height: 100% !important;
+                    max-height: 100% !important;
+                  }
+                }
+              `}
+        </style>
 
         {/* الجانب الأيسر: صورة النبات المعروضة بدقة */}
         <div
+          className="modal-img-side"
           style={{
             position: "relative",
             width: "100%",
             height: "100%",
             background: "#0d1a0b",
+            overflow: "hidden",
           }}
         >
           <img
@@ -301,6 +320,7 @@ function ImageDetailModal({ log, onClose }) {
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              objectPosition: "center",
               display: "block",
             }}
           />
