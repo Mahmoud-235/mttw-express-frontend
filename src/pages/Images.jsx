@@ -849,8 +849,12 @@ export default function Images() {
   const [activeLog, setActiveLog] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
 
   const fileRef = useRef();
+  const videoRef = useRef();
+  const canvasRef = useRef();
 
   const { data, loading, refetch } = useFetch(
     () => imagesAPI.getHistory({ sectorId: sectorId || undefined, limit: 200 }),
@@ -986,6 +990,57 @@ export default function Images() {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const openCamera = async () => {
+    if (!sectorId) {
+      toast.error("Please select a sector first.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      setCameraStream(stream);
+      setCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      toast.error("Unable to access camera. Check permissions.");
+      console.error(err);
+    }
+  };
+
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    try {
+      const ctx = canvasRef.current.getContext("2d");
+      canvasRef.current.width = videoRef.current.videoWidth;
+      canvasRef.current.height = videoRef.current.videoHeight;
+      ctx.drawImage(videoRef.current, 0, 0);
+      canvasRef.current.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+          closeCamera();
+          handleUpload(file);
+        }
+      }, "image/jpeg", 0.95);
+    } catch (err) {
+      toast.error("Failed to capture photo");
+      console.error(err);
+    }
+  };
+
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    setCameraOpen(false);
   };
 
   const getPageNumbers = () => {
@@ -1329,127 +1384,225 @@ export default function Images() {
       {/* Upload Zone */}
       <div
         className={`ds-upload${dragOver ? " drag" : ""}${!sectorId ? " blocked" : ""}`}
-        style={{ marginBottom: 24 }}
-        onClick={() => {
-          if (!sectorId) {
-            toast.error("Please select a sector first.");
-            return;
-          }
-          if (!uploading) fileRef.current?.click();
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (sectorId) setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
+        style={{ marginBottom: 24, display: "flex", gap: 12, flexWrap: "wrap" }}
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onClick={(e) => {
-            e.target.value = null;
+        <div
+          className={`ds-upload${dragOver ? " drag" : ""}${!sectorId ? " blocked" : ""}`}
+          style={{ marginBottom: 0, flex: 1, minWidth: 300 }}
+          onClick={() => {
+            if (!sectorId) {
+              toast.error("Please select a sector first.");
+              return;
+            }
+            if (!uploading) fileRef.current?.click();
           }}
-          onChange={(e) => {
-            if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (sectorId) setDragOver(true);
           }}
-        />
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+        >
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onClick={(e) => {
+              e.target.value = null;
+            }}
+            onChange={(e) => {
+              if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+            }}
+          />
 
-        {uploading ? (
-          <>
-            <div
-              className="ds-upload-icon"
-              style={{
-                background: "var(--c-primary)",
-                borderColor: "var(--c-primary)",
-              }}
-            >
-              <Loader
-                size={22}
-                style={{ color: "#fff", animation: "spin .8s linear infinite" }}
-              />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p
+          {uploading ? (
+            <>
+              <div
+                className="ds-upload-icon"
                 style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "var(--c-primary)",
-                  marginBottom: 4,
+                  background: "var(--c-primary)",
+                  borderColor: "var(--c-primary)",
                 }}
               >
-                Uploading & analyzing with AI…
-              </p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
-                This may take a few seconds
-              </p>
-            </div>
-          </>
-        ) : !sectorId ? (
-          <>
-            <div
-              className="ds-upload-icon"
-              style={{
-                background: "var(--c-warn-l)",
-                borderColor: "var(--c-warn-b)",
-              }}
-            >
-              <AlertTriangle size={24} style={{ color: "var(--c-warn)" }} />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p
+                <Loader
+                  size={22}
+                  style={{ color: "#fff", animation: "spin .8s linear infinite" }}
+                />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "var(--c-primary)",
+                    marginBottom: 4,
+                  }}
+                >
+                  Uploading & analyzing with AI…
+                </p>
+                <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
+                  This may take a few seconds
+                </p>
+              </div>
+            </>
+          ) : !sectorId ? (
+            <>
+              <div
+                className="ds-upload-icon"
                 style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "var(--c-warn)",
-                  marginBottom: 5,
+                  background: "var(--c-warn-l)",
+                  borderColor: "var(--c-warn-b)",
                 }}
               >
-                Select a sector first
-              </p>
-              <p style={{ fontSize: 12, color: "#92400e" }}>
-                Choose a sector from above to enable image upload
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="ds-upload-icon">
-              <Camera size={24} style={{ color: "var(--c-primary)" }} />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "var(--c-ink)",
-                  marginBottom: 5,
-                }}
-              >
-                Drop image here or click to upload
-              </p>
-              <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
-                PNG, JPG, WEBP — plant photos for disease detection
-              </p>
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "var(--c-primary)",
-                  fontWeight: 700,
-                  marginTop: 5,
-                }}
-              >
-                📍 Will be linked to: <strong>{selectedSector?.name}</strong>
-              </p>
-            </div>
-            <button className="ds-btn ds-btn-primary" type="button">
-              <Upload size={14} /> Choose Image
-            </button>
-          </>
+                <AlertTriangle size={24} style={{ color: "var(--c-warn)" }} />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "var(--c-warn)",
+                    marginBottom: 5,
+                  }}
+                >
+                  Select a sector first
+                </p>
+                <p style={{ fontSize: 12, color: "#92400e" }}>
+                  Choose a sector from above to enable image upload
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ds-upload-icon">
+                <Upload size={24} style={{ color: "var(--c-primary)" }} />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "var(--c-ink)",
+                    marginBottom: 5,
+                  }}
+                >
+                  Drop image here or click to upload
+                </p>
+                <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
+                  PNG, JPG, WEBP — plant photos for disease detection
+                </p>
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: "var(--c-primary)",
+                    fontWeight: 700,
+                    marginTop: 5,
+                  }}
+                >
+                  📍 Will be linked to: <strong>{selectedSector?.name}</strong>
+                </p>
+              </div>
+              <button className="ds-btn ds-btn-primary" type="button">
+                <Upload size={14} /> Choose Image
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Camera Button */}
+        {!uploading && sectorId && (
+          <button
+            onClick={openCamera}
+            className="ds-btn ds-btn-primary"
+            style={{
+              padding: "12px 24px",
+              alignSelf: "flex-end",
+              marginBottom: 0,
+            }}
+          >
+            <Camera size={16} /> Take Photo
+          </button>
         )}
       </div>
+
+      {/* Camera Modal */}
+      {cameraOpen &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.95)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 9999,
+              padding: 16,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                maxWidth: 600,
+                background: "#000",
+                borderRadius: 20,
+                overflow: "hidden",
+                aspectRatio: "4 / 3",
+              }}
+            >
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+              <canvas ref={canvasRef} style={{ display: "none" }} />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                marginTop: 20,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={capturePhoto}
+                className="ds-btn ds-btn-primary"
+                style={{
+                  padding: "12px 28px",
+                  fontSize: 15,
+                }}
+              >
+                <CheckCircle size={16} /> Capture
+              </button>
+              <button
+                onClick={closeCamera}
+                className="ds-btn ds-btn-ghost"
+                style={{
+                  padding: "12px 28px",
+                  fontSize: 15,
+                  background: "rgba(255,255,255,0.1)",
+                  borderColor: "rgba(255,255,255,0.3)",
+                  color: "#fff",
+                }}
+              >
+                <X size={16} /> Cancel
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Grid Display */}
       {loading ? (
