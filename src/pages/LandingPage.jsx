@@ -273,8 +273,8 @@ const LandingPage = () => {
           top: 0,
           width: "100%",
           zIndex: 1000,
-          padding: "0 60px",
-          height: 70,
+          padding: "0 16px",
+          height: 60,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -283,6 +283,10 @@ const LandingPage = () => {
           borderBottom: scrolled ? "1px solid rgba(82,212,74,0.1)" : "none",
           transition: "all 0.4s ease",
           boxSizing: "border-box",
+          "@media (min-width: 768px)": {
+            padding: "0 60px",
+            height: 70,
+          }
         }}
       >
         {/* Logo */}
@@ -310,13 +314,13 @@ const LandingPage = () => {
           >
             <FaLeaf color="#fff" />
           </div>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
+          <span style={{ fontSize: "clamp(16px, 4vw, 22px)", fontWeight: 800, letterSpacing: -0.5 }}>
             EcoSense
           </span>
         </div>
 
         {/* Desktop Nav */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "none", gap: 6, alignItems: "center", "@media (min-width: 768px)": { display: "flex" } }}>
           {NAV_ITEMS.map((item, i) => (
             <button
               key={i}
@@ -346,7 +350,7 @@ const LandingPage = () => {
         </div>
 
         {/* Right actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button
             onClick={toggleLanguage}
             style={{
@@ -400,7 +404,72 @@ const LandingPage = () => {
             {t("getStarted")}
           </button>
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setMobileMenu(!mobileMenu)}
+          style={{
+            display: "flex",
+            "@media (min-width: 768px)": { display: "none" },
+            alignItems: "center",
+            padding: "6px 12px",
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#fff",
+            cursor: "pointer",
+            borderRadius: 8,
+            fontSize: 20,
+          }}
+        >
+          {mobileMenu ? <FaTimes /> : <FaBars />}
+        </button>
       </motion.nav>
+
+      {/* Mobile Menu */}
+      {mobileMenu && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          style={{
+            position: "fixed",
+            top: 60,
+            left: 0,
+            right: 0,
+            background: "rgba(5,14,9,0.95)",
+            backdropFilter: "blur(20px)",
+            borderBottom: "1px solid rgba(82,212,74,0.1)",
+            zIndex: 999,
+            padding: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                scrollToSection(item.id);
+                setMobileMenu(false);
+              }}
+              style={{
+                padding: "12px 16px",
+                background: "rgba(82,212,74,0.08)",
+                border: "1px solid rgba(82,212,74,0.2)",
+                color: "#fff",
+                cursor: "pointer",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                textAlign: "left",
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
 
       {/* ── HERO ── */}
       <section
@@ -475,11 +544,16 @@ const LandingPage = () => {
             width: "100%",
             maxWidth: 1300,
             margin: "0 auto",
-            padding: "120px 60px 60px",
+            padding: "60px 20px",
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 60,
+            gridTemplateColumns: "1fr",
+            gap: 40,
             alignItems: "center",
+            "@media (min-width: 768px)": {
+              padding: "120px 60px 60px",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 60,
+            }
           }}
         >
           {/* LEFT */}
@@ -905,7 +979,11 @@ const LandingPage = () => {
       {/* ── STATS ── */}
       <section
         style={{
-          padding: "0 60px 100px",
+          padding: "40px 20px 60px",
+          "@media (min-width: 768px)": {
+            padding: "0 60px 100px",
+          }
+        }}
           marginTop: -50,
           position: "relative",
           zIndex: 20,
@@ -1013,7 +1091,10 @@ const LandingPage = () => {
       <section
         id="overview"
         style={{
-          padding: "100px 60px",
+          padding: "60px 20px",
+          "@media (min-width: 768px)": {
+            padding: "100px 60px",
+          },
           background: "linear-gradient(180deg,#f0fdf4 0%,#fff 100%)",
           color: "#111",
         }}
@@ -1023,8 +1104,8 @@ const LandingPage = () => {
             maxWidth: 1200,
             margin: "0 auto",
             display: "grid",
-            gridTemplateColumns: "1.1fr 1fr",
-            gap: 80,
+            gridTemplateColumns: "1fr",
+            gap: 40,
             alignItems: "center",
           }}
         >
@@ -1077,7 +1158,7 @@ const LandingPage = () => {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                 gap: 16,
               }}
             >
@@ -1206,7 +1287,12 @@ const LandingPage = () => {
       {/* ── FEATURES ── */}
       <section
         id="features"
-        style={{ padding: "100px 60px", background: "#fff", color: "#111" }}
+          padding: "60px 20px",
+          "@media (min-width: 768px)": {
+            padding: "100px 60px",
+          }
+        }}
+        style={{
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <motion.div
@@ -1357,7 +1443,7 @@ const LandingPage = () => {
       {/* ── ARCHITECTURE ── */}
       <section
         id="architecture"
-        style={{ padding: "100px 60px", background: "#050e09", color: "#fff" }}
+        style={{ padding: "60px 20px", "@media (min-width: 768px)": { padding: "100px 60px" }, background: "#050e09", color: "#fff" }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <motion.div
@@ -1463,7 +1549,7 @@ const LandingPage = () => {
       {/* ── PRICING ── */}
       <section
         id="pricing"
-        style={{ padding: "100px 60px", background: "#f0fdf4", color: "#111" }}
+        style={{ padding: "60px 20px", "@media (min-width: 768px)": { padding: "100px 60px" }, background: "#f0fdf4", color: "#111" }}
       >
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <motion.div
@@ -1691,7 +1777,10 @@ const LandingPage = () => {
       {/* ── CTA ── */}
       <section
         style={{
-          padding: "100px 60px",
+          padding: "60px 20px",
+          "@media (min-width: 768px)": {
+            padding: "100px 60px",
+          },
           background: "linear-gradient(135deg,#052e16,#14532d,#052e16)",
           position: "relative",
           overflow: "hidden",
@@ -1817,7 +1906,11 @@ const LandingPage = () => {
         id="footer"
         style={{
           background: "#020b08",
-          padding: "60px 60px 30px",
+          padding: "40px 20px 20px",
+          "@media (min-width: 768px)": {
+            padding: "60px 60px 30px",
+          }
+        }}
           color: "#fff",
           borderTop: "1px solid rgba(82,212,74,0.1)",
         }}
