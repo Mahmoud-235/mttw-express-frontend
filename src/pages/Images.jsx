@@ -880,7 +880,6 @@ export default function Images() {
     let iCount = 0;
 
     allImages.forEach((img) => {
-      // محاولة قراءة الستيتس من كذا مكان متوقع في الـ Backend
       const status = (
         img.analysisResult?.status ||
         img.status ||
@@ -1003,7 +1002,16 @@ export default function Images() {
     }
   };
 
-  // فتح كاميرا الجهاز الأصلية مباشرة عبر input[capture] (أسهل وأخف من مودال الفيديو اللايف)
+  // 1️⃣ فتح معرض الصور (الـ input العادي)
+  const openGallery = () => {
+    if (!sectorId) {
+      toast.error("الرجاء اختيار القطاع أولاً.");
+      return;
+    }
+    fileRef.current?.click();
+  };
+
+  // 2️⃣ فتح كاميرا الجهاز الأصلية مباشرة عبر input[capture]
   const openNativeCamera = () => {
     if (!sectorId) {
       toast.error("الرجاء اختيار القطاع أولاً.");
@@ -1011,8 +1019,6 @@ export default function Images() {
     }
     cameraInputRef.current?.click();
   };
-
-  // فتح اختيار صورة من المعرض
 
   const openCamera = async () => {
     if (!sectorId) {
@@ -1202,7 +1208,7 @@ export default function Images() {
         )}
       </div>
 
-      {/* 🟢 الـ Stats معدلة بدون شرط الحجب لتظهر دائماً ومحسنة الخلفيات والألوان لتناسب EcoSense */}
+      {/* الـ Stats */}
       <div
         style={{
           display: "grid",
@@ -1426,7 +1432,7 @@ export default function Images() {
               toast.error("Please select a sector first.");
               return;
             }
-            // الضغط على أي مكان فاضي في منطقة الرفع يفتح المعرض كسلوك افتراضي
+            // السلوك الافتراضي عند الضغط على الـ container الفاضي هو فتح المعرض
             if (!uploading) openGallery();
           }}
           onDragOver={(e) => {
@@ -1436,7 +1442,7 @@ export default function Images() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
-          {/* input لاختيار صورة من المعرض (بدون capture) */}
+          {/* input لاختيار صورة من المعرض */}
           <input
             ref={fileRef}
             type="file"
@@ -1450,7 +1456,7 @@ export default function Images() {
             }}
           />
 
-          {/* input جديد بـ capture="environment" بيفتح كاميرا الجهاز الأصلية مباشرة */}
+          {/* input بـ capture="environment" بيفتح كاميرا الجهاز الأصلية مباشرة */}
           <input
             ref={cameraInputRef}
             type="file"
@@ -1556,7 +1562,7 @@ export default function Images() {
                 </p>
               </div>
 
-              {/* زرارين منفصلين: اختيار من المعرض / تصوير بكاميرا الجهاز مباشرة */}
+              {/* ✨ تم منع الـ Bubbling بـ e.stopPropagation() لضمان عمل كل زرار بمفرده */}
               <div
                 className="ds-source-row"
                 onClick={(e) => e.stopPropagation()}
@@ -1565,7 +1571,7 @@ export default function Images() {
                   type="button"
                   className="ds-source-btn gallery"
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // منع استدعاء onClick الخاص بالحاوية الأكبر
                     openGallery();
                   }}
                 >
@@ -1575,7 +1581,7 @@ export default function Images() {
                   type="button"
                   className="ds-source-btn camera"
                   onClick={(e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // منع تداخل كود فتح المعرض
                     openNativeCamera();
                   }}
                 >
@@ -1587,7 +1593,7 @@ export default function Images() {
         </div>
       </div>
 
-      {/* Camera Modal (مودال الفيديو اللايف القديم — متاح لو احتجته، الزرار المباشر بقى أسهل) */}
+      {/* Camera Modal (الفيديو المباشر القديم) */}
       {cameraOpen &&
         createPortal(
           <div
