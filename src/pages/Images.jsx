@@ -145,6 +145,14 @@ div[class*="relative"][class*="w-full"] {
   max-height: 90vh !important;
   overflow-y: auto !important;
 }
+
+/* ─── أزرار اختيار مصدر الصورة (معرض / كاميرا) ─────────────────────────── */
+.ds-source-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+.ds-source-btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:var(--r-sm);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:all var(--dur) var(--ease);border:1.5px solid transparent;}
+.ds-source-btn.gallery{background:var(--c-primary);color:#fff;box-shadow:0 4px 14px rgba(45,106,42,.35);}
+.ds-source-btn.gallery:hover{background:var(--c-primary-d);transform:translateY(-1px);}
+.ds-source-btn.camera{background:var(--c-surface);border-color:var(--c-border2);color:var(--c-primary);}
+.ds-source-btn.camera:hover{background:var(--c-primary-xl);transform:translateY(-1px);}
 `;
 
 let _injected = false;
@@ -852,7 +860,10 @@ export default function Images() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
 
+  // ref لاختيار صورة من المعرض (input عادي بدون capture)
   const fileRef = useRef();
+  // ref جديد: بيفتح كاميرا الجهاز الأصلية مباشرة (input فيه capture="environment")
+  const cameraInputRef = useRef();
   const videoRef = useRef();
   const canvasRef = useRef();
 
@@ -992,6 +1003,24 @@ export default function Images() {
     }
   };
 
+  // فتح كاميرا الجهاز الأصلية مباشرة عبر input[capture] (أسهل وأخف من مودال الفيديو اللايف)
+  const openNativeCamera = () => {
+    if (!sectorId) {
+      toast.error("الرجاء اختيار القطاع أولاً.");
+      return;
+    }
+    cameraInputRef.current?.click();
+  };
+
+  // فتح اختيار صورة من المعرض
+  const openGallery = () => {
+    if (!sectorId) {
+      toast.error("الرجاء اختيار القطاع أولاً.");
+      return;
+    }
+    fileRef.current?.click();
+  };
+
   const openCamera = async () => {
     if (!sectorId) {
       toast.error("Please select a sector first.");
@@ -999,7 +1028,11 @@ export default function Images() {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
         audio: false,
       });
       setCameraStream(stream);
@@ -1022,13 +1055,19 @@ export default function Images() {
       canvasRef.current.width = videoRef.current.videoWidth;
       canvasRef.current.height = videoRef.current.videoHeight;
       ctx.drawImage(videoRef.current, 0, 0);
-      canvasRef.current.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
-          closeCamera();
-          handleUpload(file);
-        }
-      }, "image/jpeg", 0.95);
+      canvasRef.current.toBlob(
+        (blob) => {
+          if (blob) {
+            const file = new File([blob], "camera-photo.jpg", {
+              type: "image/jpeg",
+            });
+            closeCamera();
+            handleUpload(file);
+          }
+        },
+        "image/jpeg",
+        0.95,
+      );
     } catch (err) {
       toast.error("Failed to capture photo");
       console.error(err);
@@ -1394,7 +1433,8 @@ export default function Images() {
               toast.error("Please select a sector first.");
               return;
             }
-            if (!uploading) fileRef.current?.click();
+            // الضغط على أي مكان فاضي في منطقة الرفع يفتح المعرض كسلوك افتراضي
+            if (!uploading) openGallery();
           }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -1403,10 +1443,26 @@ export default function Images() {
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
+          {/* input لاختيار صورة من المعرض (بدون capture) */}
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
+            style={{ display: "none" }}
+            onClick={(e) => {
+              e.target.value = null;
+            }}
+            onChange={(e) => {
+              if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+            }}
+          />
+
+          {/* input جديد بـ capture="environment" بيفتح كاميرا الجهاز الأصلية مباشرة */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
             style={{ display: "none" }}
             onClick={(e) => {
               e.target.value = null;
@@ -1427,7 +1483,10 @@ export default function Images() {
               >
                 <Loader
                   size={22}
-                  style={{ color: "#fff", animation: "spin .8s linear infinite" }}
+                  style={{
+                    color: "#fff",
+                    animation: "spin .8s linear infinite",
+                  }}
                 />
               </div>
               <div style={{ textAlign: "center" }}>
@@ -1487,7 +1546,7 @@ export default function Images() {
                     marginBottom: 5,
                   }}
                 >
-                  Drop image here or click to upload
+                  Drop image here, or choose a source below
                 </p>
                 <p style={{ fontSize: 12, color: "var(--c-ink-40)" }}>
                   PNG, JPG, WEBP — plant photos for disease detection
@@ -1503,30 +1562,39 @@ export default function Images() {
                   📍 Will be linked to: <strong>{selectedSector?.name}</strong>
                 </p>
               </div>
-              <button className="ds-btn ds-btn-primary" type="button">
-                <Upload size={14} /> Choose Image
-              </button>
+
+              {/* زرارين منفصلين: اختيار من المعرض / تصوير بكاميرا الجهاز مباشرة */}
+              <div
+                className="ds-source-row"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="ds-source-btn gallery"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openGallery();
+                  }}
+                >
+                  <ImageIcon size={15} /> اختر من المعرض
+                </button>
+                <button
+                  type="button"
+                  className="ds-source-btn camera"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openNativeCamera();
+                  }}
+                >
+                  <Camera size={15} /> صور بالكاميرا
+                </button>
+              </div>
             </>
           )}
         </div>
-
-        {/* Camera Button */}
-        {!uploading && sectorId && (
-          <button
-            onClick={openCamera}
-            className="ds-btn ds-btn-primary"
-            style={{
-              padding: "12px 24px",
-              alignSelf: "flex-end",
-              marginBottom: 0,
-            }}
-          >
-            <Camera size={16} /> Take Photo
-          </button>
-        )}
       </div>
 
-      {/* Camera Modal */}
+      {/* Camera Modal (مودال الفيديو اللايف القديم — متاح لو احتجته، الزرار المباشر بقى أسهل) */}
       {cameraOpen &&
         createPortal(
           <div
